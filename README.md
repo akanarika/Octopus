@@ -7,6 +7,7 @@ The application of point-based techniques is explained in [[1]](#1).  According 
 
 ### Approach
 We want to first use this method explained in [[1]](#1) to represent the octopus mesh, then add the elastic material property described in [[2]](#2), and finally, if time permits, handle contact with the approach in [[3]](#3).
+![](chart.jpg)
 The system will input an obj file of the octopus model. It will first use its geometry info to build a point-based model, then add elastic properties to the points. The physics system will iterate over every point per frame and update the point’s status. After that the mesh will be regenerated.
 To demonstrate the result, we will render several animation demos and also create a program that you can interact with the octopus.
 
