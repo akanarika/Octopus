@@ -15,7 +15,8 @@ To demonstrate the result, we will render several animation demos and also creat
 We are going to use Processing for this project. It is a flexible software sketchbook and a language that has OpenGL integration for accelerated 3D. It is open source and people around the world are contributing to this project. It is great for creating interactions and has libraries to handle 3D rendering. 
 We will use some of the processing libraries. Here are the ones we choose:
 - Particle Flow, a Processing/Java library for high performance GPU-Computing (GLSL). It has a renderer that can save us time to build. 
-- Peasy Cam, a mouse driven camera-control library for 3D sketches. 
+- Peasy Cam, a mouse driven camera-control library for 3D sketches.
+
 We may use more libraries, mostly to add fun interactions. 
 Things we must create by ourselves:
 - Convert model to point based geometry
