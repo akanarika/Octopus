@@ -8,6 +8,7 @@ class Phyxel
   float mass;
   float density;
   Vector3D matCoord;
+  Vector3D position;
   
   public Phyxel()
   {
@@ -32,5 +33,5 @@ class Phyxel
     // acceleration
     // integrate
   }
-  
+   
 }
