@@ -5,72 +5,117 @@ import java.util.Collections;
 
 class Vector3D
 {
-  int x, y, z;
+  float x, y, z;
+  
+  /* Return the power of the distance between two vectors*/
   public int distance2(Vector3D aVector)
   {
     return int (pow((aVector.x-x),2) + pow((aVector.y-y),2) + pow((aVector.z-z),2));
-  }
+  } 
 }
 
+class Vector3DI
+{
+  int x, y, z;
+  public Vector3DI(int _x, int _y, int _z){ x = _x; y = _y; z = _z;}
+  public int total() { return x * y * z; }
+}
+
+/* World : seperate the space into small squares
+ * y
+ * ^    z
+ * |   /
+ * |  /
+ * | /
+ * | - - - - -> x
+ * 0
+ */
 class World
 {
-  static final int p1 = 73856093;
-  static final int p2 = 19349663;
-  static final int p3 = 83492791;
-  
-  HashMap<Integer, ArrayList<Phyxel>> hashMap;
-  public int cellSize;
+  HashMap<Integer, ArrayList<Integer>> hashMap;
+   
   public Vector3D worldSize;
-  public int bucketNum;
-  public Vector3D center;
-  
-  // Set the bin size to the radius size!!!!!!
-  public World(Vector3D _center, Vector3D _worldSize, int _cellSize, int _bucketNum)
-  {
-    center = _center;
-    worldSize = _worldSize;
-    cellSize = _cellSize;
-    bucketNum = _bucketNum;
+  private Vector3DI worldSizeInCell;
+  private float cellSize;
+  private float searchRadius;
+  public Vector3D origin;
+  public Phyxel[] phyxels;
     
-    hashMap = new HashMap <Integer, ArrayList<Phyxel>>(bucketNum);
+  public World(Vector3D _origin, Vector3D _worldSize, float _searchRadius, PShape _model)
+  {
+    origin = _origin;
+    worldSize = _worldSize;
+    searchRadius = _searchRadius;
+    cellSize = 2 * _searchRadius; // Set the bin size to the 2 * radius size!!!!!!
+    
+    worldSizeInCell = new Vector3DI (ceil(worldSize.x / cellSize), ceil(worldSize.y / cellSize), ceil(worldSize.z / cellSize);
+    int bucketNum = worldSizeInCell.total();
+    
+    hashMap = new HashMap <Integer, ArrayList<Integer>>(bucketNum);
     for(int i=0; i<bucketNum; i++)
     {
-      hashMap.put(i, new ArrayList<Phyxel>());
+      hashMap.put(i, new ArrayList<Integer>());
     }
+    
+    // Load model into Phyxels
+    initModel(_model);
   }
   
-  private int hash(Vector3D position)
+  void initModel(PShape model)
+  {
+   
+  }
+  
+  public int toIndex(Vector3D position)
+  {
+    Vector3DI cellIndex=  coordToCellIndex(position);
+    return cellIndexToIndex(cellIndex);
+  }
+    // cell: [Min, Max)
+  private Vector3DI coordToCellIndex(Vector3D worldPos)
+  {
+    return new Vector3DI(floor(worldPos.x / worldSizeInCell.x) , floor(worldPos.y / worldSizeInCell.y), floor(worldPos.z/worldSizeInCell.z));
+  }
+  
+  /* hash a cell_space index into an integer */
+  private int cellIndexToIndex(Vector3DI pos)
   {
     //return (position.x * p1) ^ (position.y * p2) ^ (position.z * p3) % bucketNum;
-    return position.x + position.y * worldSize.x + position.z * worldSize.x * worldSize.y;
+    return pos.x + pos.y * worldSizeInCell.x + pos.z * worldSizeInCell.y * worldSizeInCell.x;
   }
   
   public boolean add(Phyxel p)
   {
-    hashMap.get(hash(p.matCoord)).add(p);
+    hashMap.get( toIndex(p.position) ).add(p.index);
     return true;
   }
   
-  public ArrayList<Phyxel> get(int cell)
+  public ArrayList<Integer> getListAt(int cell)
   {
     return hashMap.get(cell);
   }
   
-
+  public void clear(int cell)
+  {
+    hashMap.put (cell, new ArrayList<Integer>());
+  }
   
   public ArrayList<Phyxel>getNearest(Vector3D position, int num)
   {
     ArrayList<Phyxel> result = new ArrayList<Phyxel>();
+   
+     
     ArrayList<Phyxel> cellElements = hashMap.get(hash(position));
 
     int iterNum = cellElements.size();
-    int cellSize2 = cellSize * cellSize;
+    float cellSize2 = cellSize * cellSize;
+    
     for(int i = 0; i < iterNum; i++)
     {
       Phyxel currentElement = cellElements.get(i);
-      int distance = position.distance2(currentElement.position);
+      int distance2 = position.distance2(currentElement.position);
       // remove itself
-      if(distance < cellSize2 && distance != 0)
+      if(distance2 < cellSize2 && distance2 != 0)
       {
         result.add(currentElement);
       }

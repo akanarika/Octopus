@@ -4,11 +4,12 @@ final int NUM_OF_NEAREST_NEIGHBOUR = 10;
 
 class Phyxel
 {
-  Phyxel[] neighbours;
+  int[] neighbours;
   float mass;
   float density;
   Vector3D matCoord;
   Vector3D position;
+  int index;
   
   public Phyxel()
   {
@@ -17,11 +18,6 @@ class Phyxel
       // set nearest neighbours
       // compute average r
       // hi = 3(>1) * r
-  }
-  
-  void findNearestNeighbours()
-  {
-    //Spatial Hashing
   }
   
   void update()
