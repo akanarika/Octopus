@@ -4,10 +4,12 @@ final int NUM_OF_NEAREST_NEIGHBOUR = 10;
 
 class Phyxel
 {
-  int[] neighbours;
+  ArrayList<Integer> neighbours;
   float mass;
-  float density;
-  Vector3D matCoord;
+  float density;  // rho = sum_j(m_j * w_ij)
+  float volume;  // v_i = m_i / rho_i
+  float h;
+  Vector3D matCoord;  // x
   Vector3D position;
   int index;
   
@@ -18,6 +20,16 @@ class Phyxel
       // set nearest neighbours
       // compute average r
       // hi = 3(>1) * r
+  }
+  
+  public void setNeighbors(ArrayList<Integer> _neighbours) 
+  {
+    neighbours = new ArrayList<>(_neighbours);
+  }
+  
+  public ArrayList<Integer> getNeighbours() 
+  {
+    return neighbours;
   }
   
   void update()
