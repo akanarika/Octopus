@@ -2,6 +2,8 @@
 import java.util.Map;
 import java.util.List;
 import java.util.Collections;
+import Jama.*;
+
 
 class Vector3D
 {
@@ -37,6 +39,7 @@ class Vector3D
   }
 }
 
+
 class Vector3DI
 {
   int x, y, z;
@@ -63,7 +66,7 @@ class World
   public Vector3D worldSize;
   private Vector3DI worldSizeInCell;
   private float cellSize;
-  private float searchRadius;
+  private float searchR;  // search radius
   public Vector3D origin;
   public Phyxel[] phyxels;
   
@@ -75,11 +78,12 @@ class World
   */
   ArrayList<ArrayList<Vector3D>> x;
     
-  public World(Vector3D _origin, Vector3D _worldSize, float _searchRadius, PShape _model)
+  public World(Vector3D _worldSize, float _searchRadius, PShape _model)
   {
-    origin = _origin;
+    // Force the origin to be (0, 0, 0) and put the model in the positive area 
+    origin = new Vector3D(0,0,0);
     worldSize = _worldSize;
-    searchRadius = _searchRadius;
+    searchR = _searchRadius;
     cellSize = 2 * _searchRadius; // Set the bin size to the 2 * radius size!!!!!!
     
     worldSizeInCell = new Vector3DI (ceil(worldSize.x / cellSize), ceil(worldSize.y / cellSize), ceil(worldSize.z / cellSize));
@@ -92,20 +96,39 @@ class World
     }
     
     // Load model into Phyxels
-    initModel(_model);
+    LoadModel(_model);
   }
   
-  void initModel(PShape model)
+  // Create the phyxels. The index is the same as the accordingly index in the model.
+  // Do we need to store the normals or not?
+  void LoadModel(PShape model)
   {
-   
+    int vertCount = model.getVertexCount();
+    phyxels = new Phyxel[vertCount];
+    for (int i = 0; i < vertCount; i ++)
+    {
+      // Load into Phyxel
+      PVector vertPos = model.getVertex(i);
+      Phyxel newPhyxel = new Phyxel( new Vector3D(vertPos.x, vertPos.y, vertPos.z) );
+      phyxels[i] =  newPhyxel;
+      
+      // Add Phyxel to the hash map
+      AddToCells(newPhyxel);
+    }
   }
   
+  // Convert a 3D position to an array index
   public int toIndex(Vector3D position)
   {
-    Vector3DI cellIndex=  coordToCellIndex(position);
+    // Check boundary
+    if(position.x < 0 || position.y < 0 ||position.z < 0)
+      return -1;
+      
+    Vector3DI cellIndex = coordToCellIndex(position);
     return cellIndexToIndex(cellIndex);
   }
-    // cell: [Min, Max)
+  
+  // cell: [Min, Max)
   private Vector3DI coordToCellIndex(Vector3D worldPos)
   {
     return new Vector3DI(floor(worldPos.x / worldSizeInCell.x) , floor(worldPos.y / worldSizeInCell.y), floor(worldPos.z/worldSizeInCell.z));
@@ -118,10 +141,67 @@ class World
     return pos.x + pos.y * worldSizeInCell.x + pos.z * worldSizeInCell.y * worldSizeInCell.x;
   }
   
-  public boolean add(Phyxel p)
+  public boolean AddToCells(Phyxel p)
   {
-    hashMap.get( toIndex(p.position) ).add(p.index);
+    ArrayList<Integer> cellIds = GetIdsForPhyxel(p);
+    for(int i=0; i<cellIds.size(); i++)
+    {
+      ArrayList<Integer> cell = hashMap.get(cellIds.get(i));
+      AddToList(cell, p.index);
+    }
     return true;
+  }
+  
+  // get Phyxel p's neighbourhood bucket 
+  public ArrayList<Integer>GetIdsForPhyxel(Phyxel p)
+  {
+    ArrayList<Integer> cellIdsToAdd = new ArrayList<Integer>();
+    Vector3D position = p.position;
+    
+    int index;
+    // Bottom
+    index = toIndex(new Vector3D(position.x, position.y - searchR, position.z));
+    if(index != -1){
+      AddToList(cellIdsToAdd, index);
+    }
+    // Top
+    index = toIndex(new Vector3D(position.x, position.y + searchR, position.z));
+    if(index != -1){
+      AddToList(cellIdsToAdd, index);
+    }
+    //Left
+    index = toIndex(new Vector3D(position.x - searchR, position.y, position.z));
+    if(index != -1)
+    {
+      AddToList(cellIdsToAdd, index);
+    }
+    // Right
+    index = toIndex(new Vector3D(position.x + searchR, position.y, position.z));
+    if(index != -1)
+    {
+      AddToList(cellIdsToAdd, index);
+    }
+    //Front
+    index = toIndex(new Vector3D(position.x, position.y, position.z - searchR));
+    if(index != -1)
+    {
+      AddToList(cellIdsToAdd, index);
+    }
+    // Back
+    index = toIndex(new Vector3D(position.x, position.y, position.z + searchR));
+    if(index != -1)
+    {
+      AddToList(cellIdsToAdd, index);
+    }
+    
+    return cellIdsToAdd;
+  }
+  
+  private void AddToList(ArrayList<Integer>list, int element)
+  {
+    if(!list.contains((element))){
+      list.add(element);
+    }
   }
   
   public ArrayList<Integer> getListAt(int cell)
@@ -134,30 +214,44 @@ class World
     hashMap.put (cell, new ArrayList<Integer>());
   }
   
-  public ArrayList<Phyxel>getNearest(Vector3D position, int num)
+  public void clearAll()
   {
-    ArrayList<Phyxel> result = new ArrayList<Phyxel>();
-   
-     
-    ArrayList<Phyxel> cellElements = hashMap.get(hash(position));
-
-    int iterNum = cellElements.size();
-    float cellSize2 = cellSize * cellSize;
-    
-    for(int i = 0; i < iterNum; i++)
+    hashMap.clear();
+    int total = worldSizeInCell.total();
+    for(int i=0; i<total; i++)
     {
-      Phyxel currentElement = cellElements.get(i);
-      int distance2 = position.distance2(currentElement.position);
-      // remove itself
-      if(distance2 < cellSize2 && distance2 != 0)
-      {
-        result.add(currentElement);
-      }
+      hashMap.put (i, new ArrayList<Integer>());
+    }
+  }
+  
+  public ArrayList<Integer>GetNeighbours(Phyxel p, int num)
+  {
+    // for now just returen all the points within range
+    
+    ArrayList<Integer> result = new ArrayList<Integer>();
+    ArrayList<Integer> nearbyVerts = new ArrayList<Integer>();
+    ArrayList<Integer> cellIds = GetIdsForPhyxel(p);
+    Vector3D vertPos = p.position;
+    int iterNum;
+    iterNum = cellIds.size();
+    for(int i=0; i<iterNum; i++)
+    {
+      int cellId = cellIds.get(i);
+      nearbyVerts.addAll(getListAt(cellId));
     }
     
-    // TODO: sort and get the smallest num elements
-
-    
+    // Iterate over every points
+    float searchR2 = searchR * searchR;
+    iterNum = nearbyVerts.size();
+    for(int i=0; i<iterNum; i++)
+    {
+      int nearbyIndex = nearbyVerts.get(i);
+      Vector3D nearbyPos = phyxels[nearbyIndex].position;
+      if(vertPos.distance2(nearbyPos) < searchR2){
+        result.add(nearbyIndex);
+      }
+      
+    }
     return result;
   }
   

@@ -28,7 +28,7 @@ public void setup() {
   background(0);
   
   // Load a 3D model
-  s = loadShape("../Models/stone.obj");
+  s = loadShape("sphere.obj");
   
   // record list of vertices of the given shape
   DwVertexRecorder vertex_recorder = new DwVertexRecorder(this, s);
@@ -37,5 +37,10 @@ public void setup() {
 }
 
 public void draw() {
-  shape(s, screen_width / 2, screen_height / 2, screen_width / 2, screen_height / 2);
+  background(0);
+  camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
+  lights();
+  directionalLight(255, 255, 255, 0, -1, 0);
+  translate(width/2, height/2, -100);
+  shape(s, 0, 0, 100, 100);
 }

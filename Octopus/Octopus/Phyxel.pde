@@ -6,12 +6,12 @@ class Phyxel
 {
   ArrayList<Integer> neighbours;
   float mass;
-  float density;  // rho = sum_j(m_j * w_ij)
-  float volume;  // v_i = m_i / rho_i
+  float density;      // rho = sum_j(m_j * w_ij)
+  float volume;       // v_i = m_i / rho_i
   float h;
   Vector3D matCoord;  // x
   Vector3D position;
-  int index;
+  int index;          // The index in the world array    
   
   public Phyxel()
   {
@@ -22,9 +22,14 @@ class Phyxel
       // hi = 3(>1) * r
   }
   
+  public Phyxel(Vector3D _matCoord)
+  {
+    matCoord = _matCoord;
+  }
+  
   public void setNeighbors(ArrayList<Integer> _neighbours) 
   {
-    neighbours = new ArrayList<>(_neighbours);
+    neighbours = new ArrayList<Integer>(_neighbours);
   }
   
   public ArrayList<Integer> getNeighbours() 
