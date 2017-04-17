@@ -20,62 +20,63 @@ import Jama.*;
     // Spatial Hashing Map
     HashMap<Integer, ArrayList<Integer>> hashMap;
     public Phyxel[] phyxels;
+
+
+
+    // World variables
+    Vector3D worldSize;
+    Vector3DI worldSizeInCell;
+    float cellSize;
+    float searchR;                // search radius
+    
     
     // Calculation Constants
     ArrayList<ArrayList<Float>> wlist;
     ArrayList<ArrayList<Vector3D>> xlist;
-     
-    // World variables
-    private Vector3D worldSize;
-    private Vector3DI worldSizeInCell;
-    private float cellSize;
-    private float searchR;  // search radius
-    public Vector3D origin;
-    
     /* w_ij = W(|x_j - x_i|, h_i)
      * W(r, h) is the polynomial kernel
      */
     ArrayList<ArrayList<Float>> w;
     /* x_ij = x_j - x_i
-    */
-    ArrayList<ArrayList<Vector3D>> x; //<>//
+    */ //<>//
+    ArrayList<ArrayList<Vector3D>> x;
+
       
-    // Using HE_Mesh because it has smaller vertex counts.
+        
+    // Using HE_Mesh because it has no repeat vertex
+    // Force the origin to be (0, 0, 0) and put the model in the positive area
+
     public World(Vector3D _worldSize, float _searchRadius, HE_Mesh _model)
     { 
     
-      // Force the origin to be (0, 0, 0) and put the model in the positive area 
-      origin = new Vector3D(0,0,0);
       worldSize = _worldSize;
       searchR = _searchRadius;
-      cellSize = 2 * _searchRadius; // Set the bin size to the 2 * radius size!!!!!!
-      
+      cellSize = 2 * _searchRadius;   // Setting the bin size to the 2 * radius size
       worldSizeInCell = new Vector3DI (ceil(worldSize.x / cellSize), ceil(worldSize.y / cellSize), ceil(worldSize.z / cellSize));
-      int bucketNum = worldSizeInCell.total();
       
+      int bucketNum = worldSizeInCell.total();
       hashMap = new HashMap <Integer, ArrayList<Integer>>(bucketNum);
-      for(int i=0; i<bucketNum; i++)
-      {
+      for(int i=0; i<bucketNum; i++){
         hashMap.put(i, new ArrayList<Integer>());
       }
       
       // Load model into Phyxels
-      LoadModel(_model);
+      _loadModel(_model);
+      
     }
     
-    // Create the phyxels. The index is the same as the accordingly index in the model.
-    // Do we need to store the normals or not?
-    void LoadModel(HE_Mesh model)
+    // Load the model into phyxels. 
+    void _loadModel(HE_Mesh model)
     {
-      WB_Coord [] vertexes = model.getVerticesAsArray();
+      WB_Coord [] vertices = model.getVerticesAsArray();
       //List<WB_Coord> vertexes = model.getPoints();
-      int vertCount = vertexes.length;
+      int vertCount = vertices.length;
       print(vertCount);
       phyxels = new Phyxel[vertCount];
       for (int i = 0; i < vertCount; i ++)
       {
         // Load into Phyxel
-        WB_Coord vertPos = vertexes[i];
+        WB_Coord vertPos = vertices[i];
         Phyxel newPhyxel = new Phyxel( new Vector3D(vertPos.xf(), vertPos.yf(), vertPos.zf()) , i );
         phyxels[i] =  newPhyxel;
         
@@ -85,30 +86,29 @@ import Jama.*;
     }
     
     // Convert a 3D matCoord to an array index
-    public int toIndex(Vector3D matCoord)
+    public int CoordToIndex(Vector3D matCoord)
     {
       // Check boundary
       if(matCoord.x < 0 || matCoord.y < 0 ||matCoord.z < 0)
         return -1;
         
-      Vector3DI cellIndex = coordToCellIndex(matCoord);
-      return cellIndexToIndex(cellIndex);
+      Vector3DI cellIndex = _coordToCellIndex(matCoord);
+      return _cellIndexToIndex(cellIndex);
     }
     
     // cell: [Min, Max)
-    private Vector3DI coordToCellIndex(Vector3D worldPos)
+    Vector3DI _coordToCellIndex(Vector3D worldPos)
     {
       return new Vector3DI(floor(worldPos.x / worldSizeInCell.x) , floor(worldPos.y / worldSizeInCell.y), floor(worldPos.z/worldSizeInCell.z));
     }
     
-    /* hash a cell_space index into an integer */
-    private int cellIndexToIndex(Vector3DI pos)
+    // hash a cell_space index into an integer
+    int _cellIndexToIndex(Vector3DI pos)
     {
-      //return (matCoord.x * p1) ^ (matCoord.y * p2) ^ (matCoord.z * p3) % bucketNum;
       return pos.x + pos.y * worldSizeInCell.x + pos.z * worldSizeInCell.y * worldSizeInCell.x;
     }
     
-    public boolean AddToCells(Phyxel p)
+    public void AddToCells(Phyxel p)
     {
       ArrayList<Integer> cellIds = GetIdsForPhyxel(p);
       for(int i=0; i<cellIds.size(); i++)
@@ -116,7 +116,6 @@ import Jama.*;
         ArrayList<Integer> cell = hashMap.get(cellIds.get(i));
         AddToList(cell, p.index);
       }
-      return true;
     }
     
     // get Phyxel p's neighbourhood bucket 
@@ -127,35 +126,35 @@ import Jama.*;
       
       int index;
       // Bottom
-      index = toIndex(new Vector3D(matCoord.x, matCoord.y - searchR, matCoord.z));
+      index = CoordToIndex(new Vector3D(matCoord.x, matCoord.y - searchR, matCoord.z));
       if(index != -1){
         AddToList(cellIdsToAdd, index);
       }
       // Top
-      index = toIndex(new Vector3D(matCoord.x, matCoord.y + searchR, matCoord.z));
+      index = CoordToIndex(new Vector3D(matCoord.x, matCoord.y + searchR, matCoord.z));
       if(index != -1){
         AddToList(cellIdsToAdd, index);
       }
       //Left
-      index = toIndex(new Vector3D(matCoord.x - searchR, matCoord.y, matCoord.z));
+      index = CoordToIndex(new Vector3D(matCoord.x - searchR, matCoord.y, matCoord.z));
       if(index != -1)
       {
         AddToList(cellIdsToAdd, index);
       }
       // Right
-      index = toIndex(new Vector3D(matCoord.x + searchR, matCoord.y, matCoord.z));
+      index = CoordToIndex(new Vector3D(matCoord.x + searchR, matCoord.y, matCoord.z));
       if(index != -1)
       {
         AddToList(cellIdsToAdd, index);
       }
       //Front
-      index = toIndex(new Vector3D(matCoord.x, matCoord.y, matCoord.z - searchR));
+      index = CoordToIndex(new Vector3D(matCoord.x, matCoord.y, matCoord.z - searchR));
       if(index != -1)
       {
         AddToList(cellIdsToAdd, index);
       }
       // Back
-      index = toIndex(new Vector3D(matCoord.x, matCoord.y, matCoord.z + searchR));
+      index = CoordToIndex(new Vector3D(matCoord.x, matCoord.y, matCoord.z + searchR));
       if(index != -1)
       {
         AddToList(cellIdsToAdd, index);
@@ -164,7 +163,8 @@ import Jama.*;
       return cellIdsToAdd;
     }
     
-    private void AddToList(ArrayList<Integer>list, int element)
+    // Wrapper to add unrepeated element to the list
+    public void AddToList(ArrayList<Integer>list, int element)
     {
       if(!list.contains((element))){
         list.add(element);
@@ -176,10 +176,10 @@ import Jama.*;
       return hashMap.get(cell);
     }
     
-    public void clear(int cell)
-    {
-      hashMap.put (cell, new ArrayList<Integer>());
-    }
+    //public void ClearAt(int cell)
+    //{
+    //  hashMap.put (cell, new ArrayList<Integer>());
+    //}
     
     public void clearAll()
     {
@@ -191,14 +191,16 @@ import Jama.*;
       }
     }
     
+    // Get num neighbours for pixel p
     public ArrayList<Integer>GetNeighbours(Phyxel p, int num)
     {
-      // for now just returen all the points within range
-      
+     
       ArrayList<Integer> result = new ArrayList<Integer>();
       ArrayList<Integer> nearbyVerts = new ArrayList<Integer>();
       ArrayList<Integer> cellIds = GetIdsForPhyxel(p);
       Vector3D vertPos = p.matCoord;
+      
+      // Get Nearby Vertices
       int iterNum;
       iterNum = cellIds.size();
       for(int i=0; i<iterNum; i++)
@@ -207,7 +209,7 @@ import Jama.*;
         nearbyVerts.addAll(getListAt(cellId));
       }
       
-      // Iterate over every points
+      // minHeap
       PriorityQueue<IdxDist2Pair> pq = new PriorityQueue<IdxDist2Pair>(new Comparator<IdxDist2Pair>()
       {
         public int compare(IdxDist2Pair p1, IdxDist2Pair p2){
@@ -217,9 +219,9 @@ import Jama.*;
         }
       });
       
+      // Iterate Over Every Point
       float searchR2 = searchR * searchR;
       iterNum = nearbyVerts.size();
-      //print(iterNum+"\n");
       for(int i=0; i<iterNum; i++)
       {
         int nearbyIndex = nearbyVerts.get(i);
@@ -234,19 +236,19 @@ import Jama.*;
           }
         }
       }
-      //print ("\n\n\n");
       
       iterNum = min(num, pq.size());
       int count = 0;
       while(count < iterNum)
       {
+        
         IdxDist2Pair pair = pq.poll();
+        if (pair==null) break;
         if(!result.contains(pair.index)){
           result.add(pair.index);
           count ++;
-          //print(pair.index +"\n");
         }
-       
+        
       }
       return result;
     }
@@ -298,6 +300,7 @@ import Jama.*;
       }
     }
     
+    // Display the nearest neighbours on the static model
     public void draw()
     {
       int iterNum = phyxels.length;
@@ -311,7 +314,7 @@ import Jama.*;
       strokeWeight(10);
       stroke(0,255,0);
       vertex(phyxels[0].matCoord.x, phyxels[0].matCoord.y, phyxels[0].matCoord.z);
-      ArrayList< Integer > neighbour = GetNeighbours(phyxels[0],55);
+      ArrayList< Integer > neighbour = GetNeighbours(phyxels[0],10);
       iterNum = neighbour.size();
       //print(iterNum);
       

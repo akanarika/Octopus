@@ -79,13 +79,13 @@ import processing.opengl.PGraphics3D;
       HEC_FromOBJFile creator = new HEC_FromOBJFile();
       creator.setPath("C:\\Users\\sijiah\\Documents\\GitHub\\Octopus\\Octopus\\Octopus\\data\\sphere.obj").setScale(1.0);
       mesh=new HE_Mesh(creator);
-      octopus = WB_PShapeFactory.createFacetedPShape(mesh, this);
+      octopus = WB_PShapeFactory.createWireframePShape(mesh, this);
  
       //octopus = createShapeQuad(loadShape("sphere.obj"));
       setup_pixel_flow_monitor();
       
       // set up world
-      world = new World(new Vector3D(5, 5, 5), 0.5f, mesh);
+      world = new World(new Vector3D(8, 8, 8), 0.5f, mesh);
       
       // setup skylight renderer
     }
@@ -139,9 +139,12 @@ import processing.opengl.PGraphics3D;
       //{
       //  int iterNum = world.phyxels.length;
       //  for(int i = 0; i < iterNum; i++){
-      //    print (world.toIndex((world.phyxels[i].matCoord)));
+      //    print (world.CoordToIndex((world.phyxels[i].matCoord)));
       //  }
       //}
+      translate(world.worldSize.x/2, world.worldSize.y/2, world.worldSize.z/2);
+      noFill();
+      box(world.worldSize.x, world.worldSize.y, world.worldSize.z);
     }
 //    
     void render_skylight()
