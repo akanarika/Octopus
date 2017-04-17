@@ -54,11 +54,12 @@ import processing.opengl.PGraphics3D;
     DwVertexRecorder vertex_recorder;
     
     HE_Mesh mesh;
+    WB_Render3D render;
     
     public void settings() {
       // Init the window
       size(viewport_w, viewport_h, P3D);
-      noSmooth();
+      smooth(30);
     }
     
     public void setup() {
@@ -71,8 +72,9 @@ import processing.opengl.PGraphics3D;
       // projection
       perspective(60 * DEG_TO_RAD, width/(float)height, 2, 5000);
       
-      // Load a 3D model
+      render=new WB_Render3D(this);
       
+      // Load a 3D model
       //HE_MESH
       HEC_FromOBJFile creator = new HEC_FromOBJFile();
       creator.setPath("C:\\Users\\sijiah\\Documents\\GitHub\\Octopus\\Octopus\\Octopus\\data\\sphere.obj").setScale(1.0);
@@ -94,7 +96,7 @@ import processing.opengl.PGraphics3D;
       vertex_recorder = new DwVertexRecorder(this, octopus); 
       DwBoundingSphere scene_bs = new DwBoundingSphere();
       scene_bs.compute(vertex_recorder.verts, vertex_recorder.verts_count);
-      print(vertex_recorder.verts_count);
+      //print(vertex_recorder.verts_count);
     }
     
     void setup_skylight_renderer()
