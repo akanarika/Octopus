@@ -2,50 +2,9 @@
 import java.util.Map;
 import java.util.List;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 import Jama.*;
-
-
-class Vector3D
-{
-  float x, y, z;
-  
-  public Vector3D(float _x, float _y, float _z)
-  {
-    x = _x;
-    y = _y;
-    z = _z;
-  }
-  
-  /* Return the power of the distance between two vectors*/
-  public int distance2(Vector3D aVector)
-  {
-    return int (pow((aVector.x-x),2) + pow((aVector.y-y),2) + pow((aVector.z-z),2));
-  }
-  
-  /* Return the distance between two vectors*/
-  public float distance(Vector3D aVector)
-  {
-    return sqrt(pow((aVector.x-x),2) + pow((aVector.y-y),2) + pow((aVector.z-z),2));
-  }
-  
-  public float magnitude()
-  {
-    return sqrt(x*x + y*y + z*z);
-  }
-  
-  public Vector3D subtract(Vector3D aVector)
-  {
-    return new Vector3D(x - aVector.x, y - aVector.y, z - aVector.z);
-  }
-}
-
-
-class Vector3DI
-{
-  int x, y, z;
-  public Vector3DI(int _x, int _y, int _z){ x = _x; y = _y; z = _z;}
-  public int total() { return x * y * z; }
-}
 
 /* World : seperate the space into small squares
  * y
@@ -78,8 +37,8 @@ class World
   */
   ArrayList<ArrayList<Vector3D>> x;
     
-  public World(Vector3D _worldSize, float _searchRadius, PShape _model)
-  {
+  public World(Vector3D _worldSize, float _searchRadius, HE_Mesh _model)
+  { //<>//
     // Force the origin to be (0, 0, 0) and put the model in the positive area 
     origin = new Vector3D(0,0,0);
     worldSize = _worldSize;
@@ -101,15 +60,17 @@ class World
   
   // Create the phyxels. The index is the same as the accordingly index in the model.
   // Do we need to store the normals or not?
-  void LoadModel(PShape model)
+  void LoadModel(HE_Mesh model)
   {
-    int vertCount = model.getVertexCount();
+    List<WB_Coord> vertexes = model.getPoints();
+    int vertCount = vertexes.size();
+    print(vertCount);
     phyxels = new Phyxel[vertCount];
     for (int i = 0; i < vertCount; i ++)
     {
       // Load into Phyxel
-      PVector vertPos = model.getVertex(i);
-      Phyxel newPhyxel = new Phyxel( new Vector3D(vertPos.x, vertPos.y, vertPos.z) );
+      WB_Coord vertPos = vertexes.get(i);
+      Phyxel newPhyxel = new Phyxel( new Vector3D(vertPos.xf(), vertPos.yf(), vertPos.zf()) , i );
       phyxels[i] =  newPhyxel;
       
       // Add Phyxel to the hash map
@@ -117,14 +78,14 @@ class World
     }
   }
   
-  // Convert a 3D position to an array index
-  public int toIndex(Vector3D position)
+  // Convert a 3D matCoord to an array index
+  public int toIndex(Vector3D matCoord)
   {
     // Check boundary
-    if(position.x < 0 || position.y < 0 ||position.z < 0)
+    if(matCoord.x < 0 || matCoord.y < 0 ||matCoord.z < 0)
       return -1;
       
-    Vector3DI cellIndex = coordToCellIndex(position);
+    Vector3DI cellIndex = coordToCellIndex(matCoord);
     return cellIndexToIndex(cellIndex);
   }
   
@@ -137,7 +98,7 @@ class World
   /* hash a cell_space index into an integer */
   private int cellIndexToIndex(Vector3DI pos)
   {
-    //return (position.x * p1) ^ (position.y * p2) ^ (position.z * p3) % bucketNum;
+    //return (matCoord.x * p1) ^ (matCoord.y * p2) ^ (matCoord.z * p3) % bucketNum;
     return pos.x + pos.y * worldSizeInCell.x + pos.z * worldSizeInCell.y * worldSizeInCell.x;
   }
   
@@ -156,39 +117,39 @@ class World
   public ArrayList<Integer>GetIdsForPhyxel(Phyxel p)
   {
     ArrayList<Integer> cellIdsToAdd = new ArrayList<Integer>();
-    Vector3D position = p.position;
+    Vector3D matCoord = p.matCoord;
     
     int index;
     // Bottom
-    index = toIndex(new Vector3D(position.x, position.y - searchR, position.z));
+    index = toIndex(new Vector3D(matCoord.x, matCoord.y - searchR, matCoord.z));
     if(index != -1){
       AddToList(cellIdsToAdd, index);
     }
     // Top
-    index = toIndex(new Vector3D(position.x, position.y + searchR, position.z));
+    index = toIndex(new Vector3D(matCoord.x, matCoord.y + searchR, matCoord.z));
     if(index != -1){
       AddToList(cellIdsToAdd, index);
     }
     //Left
-    index = toIndex(new Vector3D(position.x - searchR, position.y, position.z));
+    index = toIndex(new Vector3D(matCoord.x - searchR, matCoord.y, matCoord.z));
     if(index != -1)
     {
       AddToList(cellIdsToAdd, index);
     }
     // Right
-    index = toIndex(new Vector3D(position.x + searchR, position.y, position.z));
+    index = toIndex(new Vector3D(matCoord.x + searchR, matCoord.y, matCoord.z));
     if(index != -1)
     {
       AddToList(cellIdsToAdd, index);
     }
     //Front
-    index = toIndex(new Vector3D(position.x, position.y, position.z - searchR));
+    index = toIndex(new Vector3D(matCoord.x, matCoord.y, matCoord.z - searchR));
     if(index != -1)
     {
       AddToList(cellIdsToAdd, index);
     }
     // Back
-    index = toIndex(new Vector3D(position.x, position.y, position.z + searchR));
+    index = toIndex(new Vector3D(matCoord.x, matCoord.y, matCoord.z + searchR));
     if(index != -1)
     {
       AddToList(cellIdsToAdd, index);
@@ -231,7 +192,7 @@ class World
     ArrayList<Integer> result = new ArrayList<Integer>();
     ArrayList<Integer> nearbyVerts = new ArrayList<Integer>();
     ArrayList<Integer> cellIds = GetIdsForPhyxel(p);
-    Vector3D vertPos = p.position;
+    Vector3D vertPos = p.matCoord;
     int iterNum;
     iterNum = cellIds.size();
     for(int i=0; i<iterNum; i++)
@@ -241,16 +202,45 @@ class World
     }
     
     // Iterate over every points
+    PriorityQueue<IdxDist2Pair> pq = new PriorityQueue<IdxDist2Pair>(new Comparator<IdxDist2Pair>()
+    {
+      public int compare(IdxDist2Pair p1, IdxDist2Pair p2){
+        if(p1.dist2 < p2.dist2) return -1;
+        if(p1.dist2 > p2.dist2) return 1;
+        return 0;
+      }
+    });
+    
     float searchR2 = searchR * searchR;
     iterNum = nearbyVerts.size();
+    //print(iterNum+"\n");
     for(int i=0; i<iterNum; i++)
     {
       int nearbyIndex = nearbyVerts.get(i);
-      Vector3D nearbyPos = phyxels[nearbyIndex].position;
-      if(vertPos.distance2(nearbyPos) < searchR2){
-        result.add(nearbyIndex);
-      }
+      Vector3D nearbyPos = phyxels[nearbyIndex].matCoord;
+      float distance2 = vertPos.distance2(nearbyPos);
+      //print(nearbyIndex + " " + nearbyPos.x + " " + nearbyPos.y + " " + nearbyPos.z + " " + distance2 + "\n");
       
+      if(distance2 < searchR2){
+        if(nearbyIndex != p.index){
+          IdxDist2Pair pair = new IdxDist2Pair(nearbyIndex, distance2);
+          pq.offer(pair);
+        }
+      }
+    }
+    //print ("\n\n\n");
+    
+    iterNum = min(num, pq.size());
+    int count = 0;
+    while(count < iterNum)
+    {
+      IdxDist2Pair pair = pq.poll();
+      if(!result.contains(pair.index)){
+        result.add(pair.index);
+        count ++;
+        //print(pair.index +"\n");
+      }
+     
     }
     return result;
   }
@@ -301,5 +291,35 @@ class World
       xlist.add(_xlist);
     }
   }
+  
+  public void draw()
+  {
+    int iterNum = phyxels.length;
+    stroke(0, 0, 0);
+    for(int i=0; i < iterNum; i++)
+    {
+      Vector3D matCoord = phyxels[i].matCoord;
+      vertex(matCoord.x, matCoord.y, matCoord.z);
+    }
+    
+    strokeWeight(10);
+    stroke(0,255,0);
+    vertex(phyxels[110].matCoord.x, phyxels[110].matCoord.y, phyxels[110].matCoord.z);
+    ArrayList< Integer > neighbour = GetNeighbours(phyxels[110],55);
+    iterNum = neighbour.size();
+    //print(iterNum);
+    
+    
+    strokeWeight(5);
+    stroke(255, 0, 0);
+    for(int i=0; i < iterNum; i++)
+    {
+      Vector3D matCoord = phyxels[neighbour.get(i)].matCoord;
+      vertex(matCoord.x, matCoord.y, matCoord.z);
+    }
+    
+    
+  }
+  
 
 }

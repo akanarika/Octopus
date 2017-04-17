@@ -22,9 +22,10 @@ class Phyxel
       // hi = 3(>1) * r
   }
   
-  public Phyxel(Vector3D _matCoord)
+  public Phyxel(Vector3D _matCoord, int i)
   {
     matCoord = _matCoord;
+    index = i;
   }
   
   public void setNeighbors(ArrayList<Integer> _neighbours) 

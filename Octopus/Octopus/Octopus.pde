@@ -1,46 +1,150 @@
+import wblut.nurbs.*;
+import wblut.hemesh.*;
+import wblut.core.*;
+import wblut.geom.*;
+import wblut.processing.*;
+import wblut.math.*;
+
 /****************************************
-*
-* Octopus
-* CMU 15464/15-664 Technical Animation
-* main.pde
-*
-*/
+ *
+ * Octopus
+ * CMU 15464/15-664 Technical Animation
+ * main.pde
+ *
+ */
 
 // Libraries
+import java.util.Locale;
 
 import com.thomasdiewald.pixelflow.java.DwPixelFlow;
+import com.thomasdiewald.pixelflow.java.render.skylight.DwSceneDisplay;
+import com.thomasdiewald.pixelflow.java.render.skylight.DwSkyLight;
 import com.thomasdiewald.pixelflow.java.utils.DwBoundingSphere;
 import com.thomasdiewald.pixelflow.java.utils.DwVertexRecorder;
 
 import peasy.*;
-
-PShape s;
-int screen_width = 800;
-int screen_height = 600;
-
-public void settings() {
-  // Init the window
-  size(screen_width, screen_height, P3D);
-}
-
-public void setup() {
-  // Set background color
-  background(0);
+import processing.core.PApplet;
+import processing.core.PGraphics;
+import processing.core.PMatrix3D;
+import processing.core.PShape;
+import processing.opengl.PGraphics3D;
   
-  // Load a 3D model
-  s = loadShape("sphere.obj");
   
-  // record list of vertices of the given shape
-  DwVertexRecorder vertex_recorder = new DwVertexRecorder(this, s);
   
-  print(vertex_recorder.verts_count);
-}
+  
+  
+    int viewport_w = 1280;
+    int viewport_h = 720;
+    int viewport_x = 230;
+    int viewport_y = 0;
+   
+    
+    // Object
+    PShape octopus;
+    
+    // renderer
+    DwSkyLight skylight;
+    
+    // camera
+    PeasyCam cam;
+    
+    // World 
+    World world;
+    
+    DwVertexRecorder vertex_recorder;
+    
+    HE_Mesh mesh;
+    
+    public void settings() {
+      // Init the window
+      size(viewport_w, viewport_h, P3D);
+      noSmooth();
+    }
+    
+    public void setup() {
+      
+      surface.setLocation(viewport_x, viewport_y);
+      //peasyCam = new PeasyCam(this, -4.083,  -6.096,   7.000, 61);
+           
+      cam = new PeasyCam(this, 0.000,  1.000,   0.000, 0.2);
+    
+      // projection
+      perspective(60 * DEG_TO_RAD, width/(float)height, 2, 5000);
+      
+      // Load a 3D model
+      
+      //HE_MESH
+      HEC_FromOBJFile creator = new HEC_FromOBJFile();
+      creator.setPath("C:\\Users\\sijiah\\Documents\\GitHub\\Octopus\\Octopus\\Octopus\\data\\sphere.obj").setScale(1.0);
+      mesh=new HE_Mesh(creator);
+      octopus = WB_PShapeFactory.createFacetedPShape(mesh, this);
+ 
+      //octopus = createShapeQuad(loadShape("sphere.obj"));
+      setup_pixel_flow_monitor();
+      
+      // set up world
+      world = new World(new Vector3D(5, 5, 5), 0.5f, mesh);
+      
+      // setup skylight renderer
+    }
+    
+    void setup_pixel_flow_monitor()
+    {
+      // record list of vertices of the given shape
+      vertex_recorder = new DwVertexRecorder(this, octopus); 
+      DwBoundingSphere scene_bs = new DwBoundingSphere();
+      scene_bs.compute(vertex_recorder.verts, vertex_recorder.verts_count);
+      print(vertex_recorder.verts_count);
+    }
+    
+    void setup_skylight_renderer()
+    {
+      
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+ 
+    public void draw() {
+      
+      //// Render useing the skylight renderer
+      //render_skylight();
+      render();
+    
+    }
+    
+    void render()
+    {
+      background(255);
+      lights();
+      directionalLight(255, 255, 255, -1, -1, -1);
+      //translate(1, 1, 1);
 
-public void draw() {
-  background(0);
-  camera(mouseX, height/2, (height/2) / tan(PI/6), width/2, height/2, 0, 0, 1, 0);
-  lights();
-  directionalLight(255, 255, 255, 0, -1, 0);
-  translate(width/2, height/2, -100);
-  shape(s, 0, 0, 100, 100);
-}
+      shape(octopus, 0, 0);
+      
+      strokeWeight(1);
+      beginShape(POINTS);
+      world.draw();
+      endShape();
+      
+      //if(mousePressed)
+      //{
+      //  int iterNum = world.phyxels.length;
+      //  for(int i = 0; i < iterNum; i++){
+      //    print (world.toIndex((world.phyxels[i].matCoord)));
+      //  }
+      //}
+    }
+//    
+    void render_skylight()
+    {
+    }
+    
+   
+        
