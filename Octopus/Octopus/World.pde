@@ -171,7 +171,7 @@ import Jama.*;
       }
     }
     
-    public ArrayList<Integer> getListAt(int cell)
+    public ArrayList<Integer> GetListAt(int cell)
     {
       return hashMap.get(cell);
     }
@@ -181,7 +181,7 @@ import Jama.*;
     //  hashMap.put (cell, new ArrayList<Integer>());
     //}
     
-    public void clearAll()
+    public void ClearAll()
     {
       hashMap.clear();
       int total = worldSizeInCell.total();
@@ -189,6 +189,20 @@ import Jama.*;
       {
         hashMap.put (i, new ArrayList<Integer>());
       }
+    }
+    
+    public Phyxel FindPhyxelAtLocation(Vector3D pos)
+    {
+      int index = CoordToIndex(pos);
+      ArrayList<Integer> nearbyVerts = GetListAt(index);
+      int iterNum = nearbyVerts.size();
+      for(int i=0; i < iterNum; i++)
+      {
+        Vector3D vert = phyxels[i].matCoord;
+        if(vert.x == pos.x && vert.y == pos.y && vert.z == pos.z)
+          return phyxels[i];
+      }
+      return null;
     }
     
     // Get num neighbours for pixel p
@@ -206,7 +220,7 @@ import Jama.*;
       for(int i=0; i<iterNum; i++)
       {
         int cellId = cellIds.get(i);
-        nearbyVerts.addAll(getListAt(cellId));
+        nearbyVerts.addAll(GetListAt(cellId));
       }
       
       // minHeap
@@ -301,7 +315,7 @@ import Jama.*;
     }
     
     // Display the nearest neighbours on the static model
-    public void draw()
+    public void draw(int idx)
     {
       int iterNum = phyxels.length;
       stroke(0, 0, 0);
@@ -313,8 +327,8 @@ import Jama.*;
       
       strokeWeight(10);
       stroke(0,255,0);
-      vertex(phyxels[0].matCoord.x, phyxels[0].matCoord.y, phyxels[0].matCoord.z);
-      ArrayList< Integer > neighbour = GetNeighbours(phyxels[0],10);
+      vertex(phyxels[idx].matCoord.x, phyxels[idx].matCoord.y, phyxels[idx].matCoord.z);
+      ArrayList< Integer > neighbour = GetNeighbours(phyxels[idx],10);
       iterNum = neighbour.size();
       //print(iterNum);
       
@@ -328,6 +342,22 @@ import Jama.*;
       }
       
       
+    }
+    
+    public void drawVertNeighbours(HE_Vertex vert)
+    {
+      Vector3D pos = new Vector3D (vert.xf(), vert.yf(), vert.zf());
+      Phyxel chosenPhyxel = FindPhyxelAtLocation(pos);
+      ArrayList< Integer > neighbour = GetNeighbours(chosenPhyxel,10);
+      
+      int iterNum = neighbour.size();
+      strokeWeight(5);
+      stroke(255, 0, 0);
+      for(int i=0; i < iterNum; i++)
+      {
+        Vector3D matCoord = phyxels[neighbour.get(i)].matCoord;
+        vertex(matCoord.x, matCoord.y, matCoord.z);
+      }
     }
     
   

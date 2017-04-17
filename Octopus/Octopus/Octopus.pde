@@ -112,7 +112,7 @@ import processing.opengl.PGraphics3D;
     
     
     
- 
+    int phyxelIdx = 0;
     public void draw() {
       
       //// Render useing the skylight renderer
@@ -126,27 +126,24 @@ import processing.opengl.PGraphics3D;
       background(255);
       lights();
       directionalLight(255, 255, 255, -1, -1, -1);
-      //translate(1, 1, 1);
 
       shape(octopus, 0, 0);
-      
       strokeWeight(1);
       beginShape(POINTS);
-      world.draw();
+      //world.draw();
+      world.draw(phyxelIdx);
+      if(keyPressed)
+      {
+        if(key == ' ')
+           phyxelIdx ++;
+      }
       endShape();
       
-      //if(mousePressed)
-      //{
-      //  int iterNum = world.phyxels.length;
-      //  for(int i = 0; i < iterNum; i++){
-      //    print (world.CoordToIndex((world.phyxels[i].matCoord)));
-      //  }
-      //}
       translate(world.worldSize.x/2, world.worldSize.y/2, world.worldSize.z/2);
       noFill();
       box(world.worldSize.x, world.worldSize.y, world.worldSize.z);
     }
-//    
+    
     void render_skylight()
     {
     }
