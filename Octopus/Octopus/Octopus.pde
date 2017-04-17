@@ -77,12 +77,12 @@ import processing.opengl.PGraphics3D;
       // Load a 3D model
       //HE_MESH
       HEC_FromOBJFile creator = new HEC_FromOBJFile();
-      creator.setPath("C:\\Users\\sijiah\\Documents\\GitHub\\Octopus\\Octopus\\Octopus\\data\\sphere.obj").setScale(1.0);
+      creator.setPath("//Users//dandandu//Github//Octopus//Octopus//Octopus//data//sphere.obj").setScale(1.0);
       mesh=new HE_Mesh(creator);
       octopus = WB_PShapeFactory.createWireframePShape(mesh, this);
  
       //octopus = createShapeQuad(loadShape("sphere.obj"));
-      setup_pixel_flow_monitor();
+      //setup_pixel_flow_monitor();
       
       // set up world
       world = new World(new Vector3D(8, 8, 8), 0.5f, mesh);

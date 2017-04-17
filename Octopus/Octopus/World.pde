@@ -15,13 +15,10 @@ import Jama.*;
    * | - - - - -> x
    * 0
    */
-  class World
-  {
+  class Worldd  {
     // Spatial Hashing Map
     HashMap<Integer, ArrayList<Integer>> hashMap;
     public Phyxel[] phyxels;
-
-
 
     // World variables
     Vector3D worldSize;
@@ -29,10 +26,10 @@ import Jama.*;
     float cellSize;
     float searchR;                // search radius
     
-    
     // Calculation Constants
     ArrayList<ArrayList<Float>> wlist;  // w_ij = W(|x_j - x_i|, h_i), W(r, h) is the polynomial kernel
-    ArrayList<ArrayList<Vector3D>> xlist;  // x_ij = x_j - x_i //<>//
+    ArrayList<ArrayList<Vector3D>> xlist;  // x_ij = x_j - x_i
+    ArrayList<WB_M33> Alist;  // A_i = sum_j(x_ij * x_ij^T * w_ij) //<>//
 
         
     // Using HE_Mesh because it has no repeat vertex
@@ -304,6 +301,65 @@ import Jama.*;
         wlist.add(_wlist);
         xlist.add(_xlist);
       }
+    }
+    
+    // Calculate matrix A
+    // A_i = sum_j(x_ij * x_ij^T * w_ij)
+    public void initA()
+    {
+      WB_M33 A = new WB_M33(0,0,0,0,0,0,0,0,0);
+      WB_M33 a;
+      for(int i=0; i < phyxels.length; i++)
+      {
+        ArrayList<Integer> neighbours = phyxels[i].getNeighbours();
+        for(int j=0; j < neighbours.size(); j++)
+        {
+          a = new WB_M33(xlist.get(i).get(j).x * xlist.get(i).get(j).x, 
+                         xlist.get(i).get(j).x * xlist.get(i).get(j).y,
+                         xlist.get(i).get(j).x * xlist.get(i).get(j).z,
+                         xlist.get(i).get(j).y * xlist.get(i).get(j).x, 
+                         xlist.get(i).get(j).y * xlist.get(i).get(j).y,
+                         xlist.get(i).get(j).y * xlist.get(i).get(j).z,
+                         xlist.get(i).get(j).z * xlist.get(i).get(j).x, 
+                         xlist.get(i).get(j).z * xlist.get(i).get(j).y,
+                         xlist.get(i).get(j).z * xlist.get(i).get(j).z);
+          A.add(a);
+          A.mul(wlist.get(i).get(j));
+        }
+        Alist.add(A);
+      }
+    }
+    
+    public void updateU()
+    {
+      WB_Vector deltaU[] = new WB_Vector[phyxels.length];
+      Vector3D _u, _v, _w;
+      Vector3D du, dv, dw;
+      WB_M33 U;
+      for (int i=0; i < phyxels.length; i++)
+      {
+        _u = new Vector3D(0,0,0);
+        _v = new Vector3D(0,0,0);
+        _w = new Vector3D(0,0,0);
+        ArrayList<Integer> neighbours = phyxels[i].getNeighbours();
+        for (int j=0; j < neighbours.size(); j++)
+        {
+          _u.add(xlist.get(i).get(j).mult((phyxels[j].u.x - phyxels[i].u.x) * wlist.get(i).get(j)));
+          _v.add(xlist.get(i).get(j).mult((phyxels[j].u.y - phyxels[i].u.y) * wlist.get(i).get(j)));
+          _w.add(xlist.get(i).get(j).mult((phyxels[j].u.z - phyxels[i].u.z) * wlist.get(i).get(j)));
+        }
+        du = new Vector3D(Alist.get(i).m11 * _u.x + Alist.get(i).m12 * _u.y + Alist.get(i).m13 * _u.z,        
+                          Alist.get(i).m21 * _u.x + Alist.get(i).m22 * _u.y + Alist.get(i).m23 * _u.z,
+                          Alist.get(i).m31 * _u.x + Alist.get(i).m32 * _u.y + Alist.get(i).m33 * _u.z);
+        dv = new Vector3D(Alist.get(i).m11 * _v.x + Alist.get(i).m12 * _v.y + Alist.get(i).m13 * _v.z,        
+                          Alist.get(i).m21 * _v.x + Alist.get(i).m22 * _v.y + Alist.get(i).m23 * _v.z,
+                          Alist.get(i).m31 * _v.x + Alist.get(i).m32 * _v.y + Alist.get(i).m33 * _v.z);
+        dw = new Vector3D(Alist.get(i).m11 * _w.x + Alist.get(i).m12 * _w.y + Alist.get(i).m13 * _w.z,        
+                          Alist.get(i).m21 * _w.x + Alist.get(i).m22 * _w.y + Alist.get(i).m23 * _w.z,
+                          Alist.get(i).m31 * _w.x + Alist.get(i).m32 * _w.y + Alist.get(i).m33 * _w.z);
+        U = new WB_M33(du.x, du.y, du.z, dv.z, dv.y, dv.z, dw.x, dw.y, dw.z);
+      }
+      
     }
     
     // Display the nearest neighbours on the static model

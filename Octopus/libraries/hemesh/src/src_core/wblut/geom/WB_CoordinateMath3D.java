@@ -1,0 +1,96 @@
+/*
+ * This file is part of HE_Mesh, a library for creating and manipulating meshes.
+ * It is dedicated to the public domain. To the extent possible under law,
+ * I , Frederik Vanhoutte, have waived all copyright and related or neighboring
+ * rights.
+ *
+ * This work is published from Belgium. (http://creativecommons.org/publicdomain/zero/1.0/)
+ *
+ */
+/*
+ * This file is part of HE_Mesh, a library for creating and manipulating meshes.
+ * It is dedicated to the public domain. To the extent possible under law,
+ * I , Frederik Vanhoutte, have waived all copyright and related or neighboring
+ * rights.
+ *
+ * This work is published from Belgium. (http://creativecommons.org/publicdomain/zero/1.0/)
+ *
+ */
+/*
+ * This file is part of HE_Mesh, a library for creating and manipulating meshes.
+ * It is dedicated to the public domain. To the extent possible under law,
+ * I , Frederik Vanhoutte, have waived all copyright and related or neighboring
+ * rights.
+ *
+ * This work is published from Belgium. (http://creativecommons.org/publicdomain/zero/1.0/)
+ *
+ */
+package wblut.geom;
+
+import wblut.math.WB_M33;
+
+/**
+ * Interface for implementing non-mutable mathematical operations on 3D
+ * coordinates.If the operations should change the calling object use
+ * {@link wblut.geom.WB_MutableCoordinateMath3D}.
+ *
+ * None of the operators change the calling object. Unlabelled operators, such
+ * as "add",create a new WB_Coord. Operators with the label "Into", such as
+ * "addInto" store the result into a WB_MutableCoord passed as additional
+ * parameter.
+ *
+ * @author Frederik Vanhoutte
+ *
+ */
+public interface WB_CoordinateMath3D extends WB_CoordinateMath2D {
+	/**
+	 * dot product.
+	 *
+	 * @param p
+	 * @return dot product
+	 */
+	public double dot(final WB_Coord p);
+
+	/**
+	 * Absolute value of dot product.
+	 *
+	 * @param p
+	 * @return absolute value of dot product
+	 */
+	public double absDot(final WB_Coord p);
+
+	/**
+	 * Cross product of this coordinate with other coordinate.
+	 *
+	 * @param p
+	 * @return new WB_Coord
+	 */
+	public WB_Coord cross(final WB_Coord p);
+
+	/**
+	 * Store cross product of this coordinate with other coordinate in mutable
+	 * coordinate. coordinate.
+	 *
+	 * @param result
+	 * @param p
+	 */
+	public void crossInto(final WB_MutableCoord result, final WB_Coord p);
+
+	/**
+	 * Tensor product.
+	 *
+	 * @param v
+	 * @return tensor product
+	 */
+	public WB_M33 tensor(final WB_Coord v);
+
+	/**
+	 * Scalar triple: this.(v x w)
+	 *
+	 * @param v
+	 * @param w
+	 * @return scalar triple
+	 */
+	public double scalarTriple(final WB_Coord v, final WB_Coord w);
+
+}

@@ -11,6 +11,7 @@ class Phyxel
   float h;
   Vector3D matCoord;  // x
   Vector3D position;
+  Vector3D u;
   int index;          // The index in the world array    
   
   public Phyxel()
@@ -26,6 +27,7 @@ class Phyxel
   {
     matCoord = _matCoord;
     index = i;
+    u = new Vector3D(0,0,0);
   }
   
   public void setNeighbors(ArrayList<Integer> _neighbours) 

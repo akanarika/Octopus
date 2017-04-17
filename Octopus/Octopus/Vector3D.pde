@@ -9,6 +9,13 @@ class Vector3D
     z = _z;
   }
   
+  public Vector3D(double _x, double _y, double _z)
+  {
+    x = (float)_x;
+    y = (float)_y;
+    z = (float)_z;
+  }
+  
   /* Return the power of the distance between two vectors*/
   public float distance2(Vector3D aVector)
   {
@@ -29,6 +36,16 @@ class Vector3D
   public Vector3D subtract(Vector3D aVector)
   {
     return new Vector3D(x - aVector.x, y - aVector.y, z - aVector.z);
+  }
+  
+  public Vector3D add(Vector3D aVector)
+  {
+    return new Vector3D(x + aVector.x, y + aVector.y, z + aVector.z);
+  }
+  
+  public Vector3D mult(float scale)
+  {
+    return new Vector3D(x*scale, y*scale, z*scale);
   }
 }
 
