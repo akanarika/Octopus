@@ -31,17 +31,9 @@ import Jama.*;
     
     
     // Calculation Constants
-    ArrayList<ArrayList<Float>> wlist;
-    ArrayList<ArrayList<Vector3D>> xlist;
-    /* w_ij = W(|x_j - x_i|, h_i)
-     * W(r, h) is the polynomial kernel
-     */
-    ArrayList<ArrayList<Float>> w;
-    /* x_ij = x_j - x_i
-    */ //<>//
-    ArrayList<ArrayList<Vector3D>> x;
+    ArrayList<ArrayList<Float>> wlist;  // w_ij = W(|x_j - x_i|, h_i), W(r, h) is the polynomial kernel
+    ArrayList<ArrayList<Vector3D>> xlist;  // x_ij = x_j - x_i //<>//
 
-      
         
     // Using HE_Mesh because it has no repeat vertex
     // Force the origin to be (0, 0, 0) and put the model in the positive area
