@@ -12,6 +12,7 @@ class Phyxel
   Vector3D matCoord;  // x
   Vector3D position;
   Vector3D u;
+  Vector3D f;
   int index;          // The index in the world array    
   
   public Phyxel()
@@ -35,7 +36,7 @@ class Phyxel
     neighbours = new ArrayList<Integer>(_neighbours);
   }
   
-  public ArrayList<Integer> getNeighbours() 
+  public ArrayList<Integer> getNeighbours()
   {
     return neighbours;
   }

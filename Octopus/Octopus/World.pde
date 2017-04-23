@@ -15,7 +15,7 @@ import Jama.*;
    * | - - - - -> x
    * 0
    */
-  class Worldd  {
+  class World {
     // Spatial Hashing Map
     HashMap<Integer, ArrayList<Integer>> hashMap;
     public Phyxel[] phyxels;
@@ -330,12 +330,20 @@ import Jama.*;
       }
     }
     
-    public void updateU()
+    public void updateF()
     {
-      WB_Vector deltaU[] = new WB_Vector[phyxels.length];
       Vector3D _u, _v, _w;
       Vector3D du, dv, dw;
-      WB_M33 U;
+      WB_M33 U, UT, UUT, J;  // deriv U; deriv U transpose; Jacob
+      WB_M33 epsilon = new WB_M33();
+      WB_M33 sigma = new WB_M33();  // ε, σ
+      WB_Vector Ju, Jv, Jw;
+      WB_Vector JvJw, JwJu, JuJv;
+      WB_Vector di;
+      WB_Vector _f = new WB_Vector();
+      Vector3D _di = new Vector3D(0,0,0);  // -sum_j(x_ij * w_ij)
+      float C = 4;  // C
+      float k = 1; // kv ??????
       for (int i=0; i < phyxels.length; i++)
       {
         _u = new Vector3D(0,0,0);
@@ -347,6 +355,7 @@ import Jama.*;
           _u.add(xlist.get(i).get(j).mult((phyxels[j].u.x - phyxels[i].u.x) * wlist.get(i).get(j)));
           _v.add(xlist.get(i).get(j).mult((phyxels[j].u.y - phyxels[i].u.y) * wlist.get(i).get(j)));
           _w.add(xlist.get(i).get(j).mult((phyxels[j].u.z - phyxels[i].u.z) * wlist.get(i).get(j)));
+          _di.add((xlist.get(i).get(j)).mult(wlist.get(i).get(j)));
         }
         du = new Vector3D(Alist.get(i).m11 * _u.x + Alist.get(i).m12 * _u.y + Alist.get(i).m13 * _u.z,        
                           Alist.get(i).m21 * _u.x + Alist.get(i).m22 * _u.y + Alist.get(i).m23 * _u.z,
@@ -357,7 +366,39 @@ import Jama.*;
         dw = new Vector3D(Alist.get(i).m11 * _w.x + Alist.get(i).m12 * _w.y + Alist.get(i).m13 * _w.z,        
                           Alist.get(i).m21 * _w.x + Alist.get(i).m22 * _w.y + Alist.get(i).m23 * _w.z,
                           Alist.get(i).m31 * _w.x + Alist.get(i).m32 * _w.y + Alist.get(i).m33 * _w.z);
-        U = new WB_M33(du.x, du.y, du.z, dv.z, dv.y, dv.z, dw.x, dw.y, dw.z);
+        // Deriv u
+        U = new WB_M33(du.x, dv.x, dw.x, du.y, dv.y, dw.y, du.z, dv.z, dw.z);
+        
+        // u transpose
+        UT = U;
+        UT.transpose();
+        
+        // Jacobi
+        J = new WB_M33(du.x + 1, du.y, du.z, dv.x, dv.y + 1, dv.z, dw.x, dw.y, dw.z + 1);
+        
+        // U * UT
+        UUT = WB_M33.mul(U, UT);
+        
+        // U = U + UT
+        U.add(UT);
+        // epsilon = U + UT + U * UT
+        U.addInto(UUT, epsilon);
+        // sigma = C * epsilon
+        sigma = epsilon;
+        sigma.mul(C);
+        
+        Ju = J.row(0);
+        Jv = J.row(1);
+        Jw = J.row(2);
+        JvJw = Jv.cross(Jw);
+        JwJu = Jv.cross(Jw);
+        JuJv = Ju.cross(Jv);
+        di = WB_M33.mulToVector(Alist.get(i).inverse(), _di.to_WB_Vector());  //  di = A^-1*(-sum_j(x_ij*w_ij))
+        _f = WB_M33.mulToVector(new WB_M33(JvJw.coords()[0], JvJw.coords()[1], JvJw.coords()[2],
+                                  JwJu.coords()[0], JwJu.coords()[1], JwJu.coords()[2],
+                                  JuJv.coords()[0], JuJv.coords()[1], JuJv.coords()[2]), di).mul(
+                                  -phyxels[i].volume * k * (J.det() - 1));
+        phyxels[i].f = new Vector3D(_f.coords());
       }
       
     }

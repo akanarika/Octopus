@@ -5,6 +5,13 @@ import wblut.geom.*;
 import wblut.processing.*;
 import wblut.math.*;
 
+import wblut.nurbs.*;
+import wblut.hemesh.*;
+import wblut.core.*;
+import wblut.geom.*;
+import wblut.processing.*;
+import wblut.math.*;
+
 /****************************************
  *
  * Octopus
