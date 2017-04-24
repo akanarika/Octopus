@@ -330,6 +330,8 @@ import Jama.*;
       }
     }
     
+    //  Force of each phyxel has to be initialized to 0 at each frame
+    //  (which has not been done yet!!!)
     public void updateF()
     {
       Vector3D _u, _v, _w;
@@ -337,10 +339,14 @@ import Jama.*;
       WB_M33 U, UT, UUT, J;  // deriv U; deriv U transpose; Jacob
       WB_M33 epsilon = new WB_M33();
       WB_M33 sigma = new WB_M33();  // ε, σ
+      WB_M33 Fe = new WB_M33();
+      WB_M33 Fv = new WB_M33();
+      WB_M33 Fe_add_Fv = new WB_M33();
       WB_Vector Ju, Jv, Jw;
       WB_Vector JvJw, JwJu, JuJv;
-      WB_Vector di;
-      WB_Vector _f = new WB_Vector();
+      WB_Vector di, dj;
+      WB_Vector _fi = new WB_Vector();
+      WB_Vector _fj = new WB_Vector();
       Vector3D _di = new Vector3D(0,0,0);  // -sum_j(x_ij * w_ij)
       float C = 4;  // C
       float k = 1; // kv ??????
@@ -394,11 +400,21 @@ import Jama.*;
         JwJu = Jv.cross(Jw);
         JuJv = Ju.cross(Jv);
         di = WB_M33.mulToVector(Alist.get(i).inverse(), _di.to_WB_Vector());  //  di = A^-1*(-sum_j(x_ij*w_ij))
-        _f = WB_M33.mulToVector(new WB_M33(JvJw.coords()[0], JvJw.coords()[1], JvJw.coords()[2],
-                                  JwJu.coords()[0], JwJu.coords()[1], JwJu.coords()[2],
-                                  JuJv.coords()[0], JuJv.coords()[1], JuJv.coords()[2]), di).mul(
-                                  -phyxels[i].volume * k * (J.det() - 1));
-        phyxels[i].f = new Vector3D(_f.coords());
+        WB_M33.mulInto(J, sigma, Fe);
+        Fe.mul(-2 * phyxels[i].volume);
+        Fv = new WB_M33(JvJw.coords()[0], JvJw.coords()[1], JvJw.coords()[2],
+                        JwJu.coords()[0], JwJu.coords()[1], JwJu.coords()[2],
+                        JuJv.coords()[0], JuJv.coords()[1], JuJv.coords()[2]);
+        Fv.mul(-phyxels[i].volume * k * (J.det() - 1));
+        Fe.addInto(Fv, Fe_add_Fv);
+        _fi = WB_M33.mulToVector(Fe_add_Fv, di);
+        phyxels[i].f.add(new Vector3D(_fi.coords()));
+        for (int j=0; j < neighbours.size(); j++)
+        {
+          dj = WB_M33.mulToVector(Alist.get(i).inverse(), (xlist.get(i).get(j)).mult(wlist.get(i).get(j)).to_WB_Vector());
+          _fj = WB_M33.mulToVector(Fe_add_Fv, dj);
+          phyxels[j].f.add(new Vector3D(_fj.coords()));
+        }
       }
       
     }
