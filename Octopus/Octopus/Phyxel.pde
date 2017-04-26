@@ -10,7 +10,8 @@ class Phyxel
   float volume;       // v_i = m_i / rho_i
   float h;
   Vector3D matCoord;  // x
-  Vector3D position;
+  Vector3D v;
+  //Vector3D position;
   Vector3D u;
   Vector3D f;
   int index;          // The index in the world array    
@@ -29,6 +30,7 @@ class Phyxel
     matCoord = _matCoord;
     index = i;
     u = new Vector3D(0,0,0);
+    v = new Vector3D(0,0,0);
   }
   
   public void setNeighbors(ArrayList<Integer> _neighbours) 
@@ -40,6 +42,7 @@ class Phyxel
   {
     return neighbours;
   }
+  
   
   void update()
   {

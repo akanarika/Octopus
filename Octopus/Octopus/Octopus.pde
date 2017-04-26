@@ -84,7 +84,7 @@ import processing.opengl.PGraphics3D;
       // Load a 3D model
       //HE_MESH
       HEC_FromOBJFile creator = new HEC_FromOBJFile();
-      creator.setPath("//Users//dandandu//Github//Octopus//Octopus//Octopus//data//sphere.obj").setScale(1.0);
+      creator.setPath("C://Users//sijiah//Documents//GitHub//Octopus//Octopus//Octopus//data//sphere.obj").setScale(1.0);
       mesh=new HE_Mesh(creator);
       octopus = WB_PShapeFactory.createWireframePShape(mesh, this);
  
@@ -124,6 +124,7 @@ import processing.opengl.PGraphics3D;
       
       //// Render useing the skylight renderer
       //render_skylight();
+      world.Update();
       render();
     
     }

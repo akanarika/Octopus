@@ -16,6 +16,8 @@ import Jama.*;
    * 0
    */
   class World {
+    
+    
     // Spatial Hashing Map
     HashMap<Integer, ArrayList<Integer>> hashMap;
     public Phyxel[] phyxels;
@@ -24,17 +26,18 @@ import Jama.*;
     Vector3D worldSize;
     Vector3DI worldSizeInCell;
     float cellSize;
-    float searchR;                // search radius
+    float searchR;                  // search radius
     
     // Calculation Constants
     ArrayList<ArrayList<Float>> wlist;  // w_ij = W(|x_j - x_i|, h_i), W(r, h) is the polynomial kernel
     ArrayList<ArrayList<Vector3D>> xlist;  // x_ij = x_j - x_i
     ArrayList<WB_M33> Alist;  // A_i = sum_j(x_ij * x_ij^T * w_ij) //<>//
+    final int NEIGHBOURCOUNT = 10;
+    final float deltaTime = 0.03;
+    
 
-        
     // Using HE_Mesh because it has no repeat vertex
-    // Force the origin to be (0, 0, 0) and put the model in the positive area
-
+    // Force the origin to be (0, 0, 0) and put the model in the positive areas
     public World(Vector3D _worldSize, float _searchRadius, HE_Mesh _model)
     { 
     
@@ -72,8 +75,29 @@ import Jama.*;
         // Add Phyxel to the hash map
         AddToCells(newPhyxel);
       }
+      
+      // Calculate all the phyxel constants
+      _initConstants();
     }
     
+    void Update()
+    {
+      _updateF();
+      for( int i=0; i< phyxels.length; i++)
+      {
+        Vector3D acc = phyxels[i].f.mult(1/(phyxels[i].mass));
+        phyxels[i].u.add( phyxels[i].v.mult(deltaTime).add(acc.mult(0.5*deltaTime*deltaTime)));
+        phyxels[i].v.add( acc.mult(deltaTime));
+      }
+    }
+    
+    /**************************************************************
+    *                                                             *
+    *                                                             *
+    *                        HashMap                              *
+    *                                                             *
+    *                                                             *
+    ***************************************************************/
     // Convert a 3D matCoord to an array index
     public int CoordToIndex(Vector3D matCoord)
     {
@@ -97,6 +121,7 @@ import Jama.*;
       return pos.x + pos.y * worldSizeInCell.x + pos.z * worldSizeInCell.y * worldSizeInCell.x;
     }
     
+    // Add a phyxel to all the cells it belongs to
     public void AddToCells(Phyxel p)
     {
       ArrayList<Integer> cellIds = GetIdsForPhyxel(p);
@@ -150,6 +175,7 @@ import Jama.*;
       }
       
       return cellIdsToAdd;
+      
     }
     
     // Wrapper to add unrepeated element to the list
@@ -160,6 +186,7 @@ import Jama.*;
       }
     }
     
+    // Get the list of elements in the cell
     public ArrayList<Integer> GetListAt(int cell)
     {
       return hashMap.get(cell);
@@ -170,6 +197,7 @@ import Jama.*;
     //  hashMap.put (cell, new ArrayList<Integer>());
     //}
     
+    // Clear all the elements in the hashMap
     public void ClearAll()
     {
       hashMap.clear();
@@ -180,6 +208,7 @@ import Jama.*;
       }
     }
     
+    // Use a location to find the phyxel
     public Phyxel FindPhyxelAtLocation(Vector3D pos)
     {
       int index = CoordToIndex(pos);
@@ -256,12 +285,28 @@ import Jama.*;
       return result;
     }
     
+    /**************************************************************
+    *                                                             *
+    *                                                             *
+    *                          MATH                               *
+    *                                                             *
+    *                                                             *
+    ***************************************************************/
+    
+    void _initConstants()
+    {
+      _initNeighboursAndH();
+      _initXWDV();
+      _initA();
+    }
+    
     // Calculate h of each phyxel
-    public void initH()
+    void _initNeighboursAndH()
     {
       for (int i = 0; i < phyxels.length; i++)
       {
-        ArrayList<Integer> neighbours = phyxels[i].getNeighbours();
+        ArrayList<Integer> neighbours = GetNeighbours(phyxels[i], NEIGHBOURCOUNT);
+        phyxels[i].setNeighbors(neighbours);
         float average_r = 0;
         for (int ii = 0; ii < neighbours.size(); ii++)
         {
@@ -274,8 +319,11 @@ import Jama.*;
     }
     
     // Fill w_ij list and x_ij list and density and volume
-    public void initXWDV() 
+    void _initXWDV() 
     { 
+      wlist = new ArrayList<ArrayList<Float>>();
+      xlist = new ArrayList<ArrayList<Vector3D>>();
+      
       for (int i = 0; i<phyxels.length; i++) 
       {
         ArrayList<Float> _wlist = new ArrayList<Float>();
@@ -305,8 +353,10 @@ import Jama.*;
     
     // Calculate matrix A
     // A_i = sum_j(x_ij * x_ij^T * w_ij)
-    public void initA()
+    void _initA()
     {
+      Alist = new ArrayList<WB_M33>();
+      
       WB_M33 A = new WB_M33(0,0,0,0,0,0,0,0,0);
       WB_M33 a;
       for(int i=0; i < phyxels.length; i++)
@@ -332,7 +382,7 @@ import Jama.*;
     
     //  Force of each phyxel has to be initialized to 0 at each frame
     //  (which has not been done yet!!!)
-    public void updateF()
+    void _updateF()
     {
       Vector3D _u, _v, _w;
       Vector3D du, dv, dw;
@@ -413,11 +463,20 @@ import Jama.*;
         {
           dj = WB_M33.mulToVector(Alist.get(i).inverse(), (xlist.get(i).get(j)).mult(wlist.get(i).get(j)).to_WB_Vector());
           _fj = WB_M33.mulToVector(Fe_add_Fv, dj);
-          phyxels[j].f.add(new Vector3D(_fj.coords()));
+          phyxels[neighbours.get(j)].f.add(new Vector3D(_fj.coords()));
         }
       }
       
     }
+    
+
+    /**************************************************************
+    *                                                             *
+    *                                                             *
+    *                        VISUALIZATION                        *
+    *                                                             *
+    *                                                             *
+    ***************************************************************/
     
     // Display the nearest neighbours on the static model
     public void draw(int idx)
@@ -427,13 +486,14 @@ import Jama.*;
       for(int i=0; i < iterNum; i++)
       {
         Vector3D matCoord = phyxels[i].matCoord;
-        vertex(matCoord.x, matCoord.y, matCoord.z);
+        Vector3D u = phyxels[i].u;
+        vertex(matCoord.x + u.x , matCoord.y + u.y , matCoord.z + u.z );
       }
       
       strokeWeight(10);
       stroke(0,255,0);
       vertex(phyxels[idx].matCoord.x, phyxels[idx].matCoord.y, phyxels[idx].matCoord.z);
-      ArrayList< Integer > neighbour = GetNeighbours(phyxels[idx],10);
+      ArrayList< Integer > neighbour = GetNeighbours(phyxels[idx], NEIGHBOURCOUNT);
       iterNum = neighbour.size();
       //print(iterNum);
       
