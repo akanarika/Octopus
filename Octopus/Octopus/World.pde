@@ -1,4 +1,4 @@
-// A world consist of a spatial hash map
+// A world consist of a spatial hash map //<>//
 import java.util.Map;
 import java.util.List;
 import java.util.Collections;
@@ -88,8 +88,11 @@ import Jama.*;
       {
         //printVec3D("f", phyxels[i].f);
         Vector3D acc = phyxels[i].f.mult(1/(phyxels[i].mass));
-        phyxels[i].u.add( phyxels[i].v.mult(deltaTime).add(acc.mult(0.5*deltaTime*deltaTime)));
-        phyxels[i].v.add( acc.mult(deltaTime));
+        Vector3D _a = acc.mult(0.5*deltaTime*deltaTime);
+        Vector3D _b = phyxels[i].v.mult(deltaTime);
+        Vector3D _ab = (_b).add(_a);
+        phyxels[i].u = phyxels[i].u.add(_ab);
+        phyxels[i].v = phyxels[i].v.add( acc.mult(deltaTime));
       }
     }
     
