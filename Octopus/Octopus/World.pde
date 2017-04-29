@@ -374,6 +374,15 @@ import Jama.*;
         xlist.add(_xlist);
       }
       
+      
+      // testing
+      /*
+      for(int i = 0; i < 100; i++)
+      {
+        print (wlist.get(0).get(i) + " " );
+      }
+      */
+      
     }
     
     
@@ -425,6 +434,10 @@ import Jama.*;
       {
         phyxels[i].f = new Vector3D(0,0,0);
       }
+      
+      // Add a continuous test force on one point
+      phyxels[0].f = new Vector3D(0, 1, 0);
+      
     }
     
     //  Force of each phyxel has to be initialized to 0 at each frame
@@ -456,14 +469,29 @@ import Jama.*;
         for (int ii=0; ii < neighbours.size(); ii++)
         {
           int j = neighbours.get(ii);
-          _u.add(xlist.get(i).get(j).mult((phyxels[j].u.x - phyxels[i].u.x) * wlist.get(i).get(j)));
-          _v.add(xlist.get(i).get(j).mult((phyxels[j].u.y - phyxels[i].u.y) * wlist.get(i).get(j)));
-          _w.add(xlist.get(i).get(j).mult((phyxels[j].u.z - phyxels[i].u.z) * wlist.get(i).get(j)));
-          _di.add((xlist.get(i).get(j)).mult(-wlist.get(i).get(j)));
+          _u = _u.add(xlist.get(i).get(j).mult((phyxels[j].u.x - phyxels[i].u.x) * wlist.get(i).get(j)));
+          _v = _v.add(xlist.get(i).get(j).mult((phyxels[j].u.y - phyxels[i].u.y) * wlist.get(i).get(j)));
+          _w = _w.add(xlist.get(i).get(j).mult((phyxels[j].u.z - phyxels[i].u.z) * wlist.get(i).get(j)));
+          _di = _di.add((xlist.get(i).get(j)).mult(-wlist.get(i).get(j)));
           //printVec3D("xlist_ij", xlist.get(i).get(j));
           //print("wlist_ij: " + wlist.get(i).get(j) + "\n");
           //print("i: " + i + ", j: " + ii + "\n"); 
+
         }
+        
+        /*
+        if (i == 100){
+          print("100 " +  phyxels[100].u.y + "\n");
+          print("80 " +  phyxels[80].u.y + "\n");
+          print("wlist_ij: " + wlist.get(100).get(80) + "\n");
+          printVec3D ("mult", xlist.get(i).get(80).mult((phyxels[80].u.y - phyxels[100].u.y)));
+          printVec3D ("calculation", xlist.get(i).get(80).mult((phyxels[80].u.y - phyxels[i].u.y) * wlist.get(i).get(80)));
+          printVec3D ("_v", _v);
+        }
+        */
+        
+          
+
         
         //printVec3D("_u", _u);
         //printM33("Alist[i]", Alist.get(i));
@@ -502,6 +530,7 @@ import Jama.*;
         //printM33("epsilon", epsilon);
         // sigma = C * epsilon
         sigma = epsilon;
+
         sigma.mul(C);
         //printM33("sigma", sigma);
         Ju = J.row(0);
@@ -519,6 +548,9 @@ import Jama.*;
         //printVecF("di", di);
         
         WB_M33.mulInto(J, sigma, Fe);
+        
+
+        
         //printM33("J", J);
         //printM33("Fe", Fe);
         Fe.mul(-2 * phyxels[i].volume);
@@ -527,20 +559,23 @@ import Jama.*;
                         JwJu.coords()[0], JwJu.coords()[1], JwJu.coords()[2],
                         JuJv.coords()[0], JuJv.coords()[1], JuJv.coords()[2]);
         Fv.mul(-phyxels[i].volume * k * (J.det() - 1));
+        
+       
+        
         Fe.addInto(Fv, Fe_add_Fv);
         //printM33 ("Fe", Fe);
         //printM33 ("Fe+Fv", Fe_add_Fv);
         _fi = WB_M33.mulToVector(Fe_add_Fv, di);
         //printVecF ("_fi", _fi);
         //printVec3D ("f", phyxels[i].f);
-        phyxels[i].f.add(new Vector3D(_fi.coords()));
+        phyxels[i].f = phyxels[i].f.add(new Vector3D(_fi.coords()));
         //printVec3D ("f", phyxels[i].f);
         for (int ii=0; ii < neighbours.size(); ii++)
         {
           int j = neighbours.get(ii);
           dj = WB_M33.mulToVector(Alist.get(i).inverse(), (xlist.get(i).get(j)).mult(wlist.get(i).get(j)).to_WB_Vector());
           _fj = WB_M33.mulToVector(Fe_add_Fv, dj);
-          phyxels[j].f.add(new Vector3D(_fj.coords()));
+          phyxels[j].f = phyxels[j].f.add(new Vector3D(_fj.coords()));
         }
         //printVec3D ("f", phyxels[i].f);
         
