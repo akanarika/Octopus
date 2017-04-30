@@ -19,3 +19,9 @@ void printVec3D(String name, Vector3D vec)
   print(vec.x + " " + vec.y + " " + vec.z + "\n\n");
  
 }
+
+void printVar(String name, String variable)
+{
+  print(name + ":\n");
+  print(variable);
+}

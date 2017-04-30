@@ -56,7 +56,7 @@ import processing.opengl.PGraphics3D;
     PeasyCam cam;
     
     // World 
-    World world;
+    DeformableModel model;
     
     DwVertexRecorder vertex_recorder;
     
@@ -84,7 +84,7 @@ import processing.opengl.PGraphics3D;
       // Load a 3D model
       //HE_MESH
       HEC_FromOBJFile creator = new HEC_FromOBJFile();
-      creator.setPath("//Users//dandandu//Github//Octopus//Octopus//Octopus//data//sphere.obj").setScale(1.0);
+      creator.setPath("//Users//Mercurian//Octopus//Octopus//Octopus//data//sphere.obj").setScale(1.0);
       mesh=new HE_Mesh(creator);
       octopus = WB_PShapeFactory.createWireframePShape(mesh, this);
  
@@ -92,7 +92,7 @@ import processing.opengl.PGraphics3D;
       //setup_pixel_flow_monitor();
       
       // set up world
-      world = new World(new Vector3D(8, 8, 8), 0.5f, mesh);
+      model = new DeformableModel(new Vector3D(8, 8, 8), 0.5f, mesh, 100, 0.4f);
       
       // setup skylight renderer
     }
@@ -124,7 +124,7 @@ import processing.opengl.PGraphics3D;
       
       //// Render useing the skylight renderer
       //render_skylight();
-      world.Update();
+      model.Update();
       render();
     
     }
@@ -139,7 +139,7 @@ import processing.opengl.PGraphics3D;
       strokeWeight(1);
       beginShape(POINTS);
       //world.draw();
-      world.draw(phyxelIdx);
+      model.draw(phyxelIdx);
       if(keyPressed)
       {
         if(key == ' ')
@@ -147,9 +147,9 @@ import processing.opengl.PGraphics3D;
       }
       endShape();
       
-      translate(world.worldSize.x/2, world.worldSize.y/2, world.worldSize.z/2);
+      translate(model.worldSize.x/2, model.worldSize.y/2, model.worldSize.z/2);
       noFill();
-      box(world.worldSize.x, world.worldSize.y, world.worldSize.z);
+      box(model.worldSize.x, model.worldSize.y, model.worldSize.z);
     }
     
     void render_skylight()
