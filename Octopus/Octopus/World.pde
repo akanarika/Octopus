@@ -14,8 +14,12 @@ import Jama.*;
    * | /
    * | - - - - -> x
    * 0
-   */
+   */ 
+   
   class World {
+    float P;  // Poission Ratio
+    float E;  // Young's Modulus
+    float kv;  // spring constant   ( Energy = 1/2 kx^2, x = delta_distance)
     
     
     // Spatial Hashing Map
@@ -35,7 +39,6 @@ import Jama.*;
     final int NEIGHBOURCOUNT = 10;
     final float deltaTime = 0.03;
     
-
     // Using HE_Mesh because it has no repeat vertex
     // Force the origin to be (0, 0, 0) and put the model in the positive areas
     public World(Vector3D _worldSize, float _searchRadius, HE_Mesh _model)
@@ -84,6 +87,8 @@ import Jama.*;
     {
       _initF();
       _updateF();
+      
+      ArrayList<Vector3D> newU = new ArrayList<Vector3D>();
       for( int i=0; i< phyxels.length; i++)
       {
         //printVec3D("f", phyxels[i].f);
@@ -91,8 +96,14 @@ import Jama.*;
         Vector3D _a = acc.mult(0.5*deltaTime*deltaTime);
         Vector3D _b = phyxels[i].v.mult(deltaTime);
         Vector3D _ab = (_b).add(_a);
-        phyxels[i].u = phyxels[i].u.add(_ab);
+        //phyxels[i].u = phyxels[i].u.add(_ab);
+        newU.add(phyxels[i].u.add(_ab));
         phyxels[i].v = phyxels[i].v.add( acc.mult(deltaTime));
+      }
+      
+      for(int i = 0; i < phyxels.length; i ++)
+      {
+        phyxels[i].u = newU.get(i);
       }
     }
     
@@ -300,6 +311,11 @@ import Jama.*;
     
     void _initConstants()
     {
+      P = -1;        // The Poisson's ratio of a stable, isotropic, linear elastic material will be 
+                       // greater than −1.0 or less than 0.5 because of the requirement for Young's modulus
+
+      E = pow(10, 6);
+      kv = 10;
       _initM();
       _initNeighboursAndH();
       _initXWDV();
@@ -436,7 +452,7 @@ import Jama.*;
       }
       
       // Add a continuous test force on one point
-      phyxels[0].f = new Vector3D(0, 1, 0);
+      phyxels[0].f = new Vector3D(0, -1, 0);
       
     }
     
@@ -458,8 +474,6 @@ import Jama.*;
       WB_Vector _fi = new WB_Vector();
       WB_Vector _fj = new WB_Vector();
       Vector3D _di = new Vector3D(0,0,0);  // -sum_j(x_ij * w_ij)
-      float C = 4;  // C
-      float k = 1; // kv ??????
       for (int i=0; i < phyxels.length; i++)
       {
         _u = new Vector3D(0,0,0);
@@ -531,7 +545,15 @@ import Jama.*;
         // sigma = C * epsilon
         sigma = epsilon;
 
-        sigma.mul(C);
+        // Apply Calculus C
+        //sigma.mul(C);
+        sigma = new WB_M33(
+          sigma.m11 - P * (sigma.m22 + sigma.m33), sigma.m12 * (1+P), sigma.m13 * (1+P),
+          sigma.m21 * (1+P), sigma.m22 - P * (sigma.m11 + sigma.m33), sigma.m23 * (1+P),
+          sigma.m31 * (1+P), sigma.m32 * (1+P), sigma.m33 - P * (sigma.m11 + sigma.m22)
+        );
+        sigma.mul(1/E);
+        
         //printM33("sigma", sigma);
         Ju = J.row(0);
         Jv = J.row(1);
@@ -558,7 +580,7 @@ import Jama.*;
         Fv = new WB_M33(JvJw.coords()[0], JvJw.coords()[1], JvJw.coords()[2],
                         JwJu.coords()[0], JwJu.coords()[1], JwJu.coords()[2],
                         JuJv.coords()[0], JuJv.coords()[1], JuJv.coords()[2]);
-        Fv.mul(-phyxels[i].volume * k * (J.det() - 1));
+        Fv.mul(-phyxels[i].volume * kv * (J.det() - 1));
         
        
         
