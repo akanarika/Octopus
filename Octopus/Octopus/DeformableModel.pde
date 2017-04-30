@@ -23,6 +23,8 @@ import Jama.*;
     // Physics Parameters
     float Poisson_ratio;  // Poission Ratio
     float Young_modulus;  // Young's Modulus
+    float massDensity = 1000.0f;
+    float massScaling;
     Vector3D C;           // Calculus combining the two above
     
     float kv;  // spring constant   ( Energy = 1/2 kx^2, x = delta_distance)
@@ -42,8 +44,9 @@ import Jama.*;
     ArrayList<ArrayList<Float>> wlist;  // w_ij = W(|x_j - x_i|, h_i), W(r, h) is the polynomial kernel
     ArrayList<ArrayList<Vector3D>> xlist;  // x_ij = x_j - x_i
     ArrayList<WB_M33> Alist;  // A_i = sum_j(x_ij * x_ij^T * w_ij) //<>//
-    final int NEIGHBOURCOUNT = 7;
+    final int NEIGHBOURCOUNT = 10;
     final float deltaTime = 0.03;
+    
     
     // Using HE_Mesh because it has no repeat vertex
     // Force the origin to be (0, 0, 0) and put the model in the positive areas
@@ -54,9 +57,6 @@ import Jama.*;
       cellSize = 2 * _searchRadius;   // Setting the bin size to the 2 * radius size
       worldSizeInCell = new Vector3DI (ceil(worldSize.x / cellSize), ceil(worldSize.y / cellSize), ceil(worldSize.z / cellSize));
       
-      Young_modulus = _Young_modulus;
-      Poisson_ratio = _Poisson_ratio;
-      
       int bucketNum = worldSizeInCell.total();
       hashMap = new HashMap <Integer, ArrayList<Integer>>(bucketNum);
       for(int i=0; i<bucketNum; i++){
@@ -64,8 +64,9 @@ import Jama.*;
       }
       
       // Load model into Phyxels
+      Young_modulus = _Young_modulus;
+      Poisson_ratio = _Poisson_ratio;
       _loadModel(_model);
-      
     }
     
     // Load the model into phyxels. 
@@ -320,9 +321,11 @@ import Jama.*;
     void _initConstants()
     {
       _initPhysicsParams();     
-      _initM();
       _initNeighboursAndH();
-      _initXWDV();
+      _initXW();
+      _computeScalingFactor();
+      _initMass();
+      _initDensityVolume();
       _initA();
     }
     
@@ -340,7 +343,7 @@ import Jama.*;
       
       C = new Vector3D(d16, d17, d18);
       
-      kv = 20;
+      kv = 100;
     }
     
     // Calculate h of each phyxel
@@ -359,11 +362,12 @@ import Jama.*;
         average_r /= neighbours.size();
         float h = average_r * 3;
         phyxels[i].h = h;
+        phyxels[i].r = average_r;
       }
     }
     
     // Fill w_ij list and x_ij list and density and volume
-    void _initXWDV() 
+    void _initXW() 
     { 
       wlist = new ArrayList<ArrayList<Float>>();
       xlist = new ArrayList<ArrayList<Vector3D>>();
@@ -373,11 +377,11 @@ import Jama.*;
         
         ArrayList<Float> _wlist = new ArrayList<Float>();
         ArrayList<Vector3D> _xlist = new ArrayList<Vector3D>();
-        float rho = 0;
-        float m_j = phyxels[i].mass;
+        //float rho = 0;
+        //float m_j = phyxels[i].mass;
         //print(phyxels[i].mass + "\n");
         
-        float w_sum = 0;
+        //float w_sum = 0;
         for (int j = 0; j < phyxels.length; j++)
         {
           float w = 0;
@@ -391,9 +395,10 @@ import Jama.*;
           else w = 315 * pow((h*h - r*r), 3) / (64 * (float)Math.PI * pow(h, 9));
           _wlist.add(w);
           
-          w_sum += w;
+          //w_sum += w;
         }
         
+        /*
         for (int j =0; j < phyxels.length; j++)
         {
           float w = _wlist.get(j) / w_sum;
@@ -405,6 +410,8 @@ import Jama.*;
         //print("rho: " + rho + "\n");
         phyxels[i].density = rho;
         phyxels[i].volume = m_j / rho;
+        */
+        
         //print(phyxels[i].mass + "\n");
         //print(phyxels[i].volume + "\n");
         wlist.add(_wlist);
@@ -419,9 +426,56 @@ import Jama.*;
         print (wlist.get(0).get(i) + " " );
       }
       */
+      printArrayList("wlist", wlist.get(0));
       
     }
     
+    void _computeScalingFactor()
+    {
+      massScaling = 0.0f;
+      int iterNum = phyxels.length;
+      for(int i=0; i < iterNum; i ++)
+      {
+        float sum = 0;
+        ArrayList<Integer>neighbours = phyxels[i].getNeighbours();
+        int neighbourNum = neighbours.size();
+        for(int ii=0; ii < neighbourNum; ii++)
+        {
+          int j = neighbours.get(ii);
+          sum += pow(xlist.get(i).get(j).magnitude(), 3) * wlist.get(i).get(j);
+        }
+        massScaling += 1.0f / sum;
+      }
+      massScaling /= phyxels.length;
+      print("massScaling: ", massScaling, "\n");
+    }
+    
+    
+    void _initMass()
+    {
+      for(int i=0; i<phyxels.length; i++)
+      {
+        phyxels[i].mass = massScaling * pow(phyxels[i].r, 3) * massDensity;
+      }
+      
+    }
+    
+    void _initDensityVolume()
+    {
+      for(int i=0; i<phyxels.length; i++){
+        float rho = 0;
+        ArrayList<Integer> neighbours = phyxels[i].getNeighbours();
+        int neighbourNum = neighbours.size();
+        for(int ii=0; ii<neighbourNum; ii++)
+        {
+          int j = neighbours.get(ii);
+          rho += phyxels[j].mass * wlist.get(i).get(j);
+        }
+        phyxels[i].density = rho;
+        //print("density", i, rho, "\n");
+        phyxels[i].volume = phyxels[i].mass / phyxels[i].density;
+      }
+    }
     
     // Calculate matrix A
     // A_i = sum_j(x_ij * x_ij^T * w_ij)
@@ -434,8 +488,9 @@ import Jama.*;
       for(int i=0; i < phyxels.length; i++)
       {
         ArrayList<Integer> neighbours = phyxels[i].getNeighbours();
+        A = new WB_M33(0,0,0,0,0,0,0,0,0);
         for(int ii=0; ii < neighbours.size(); ii++)
-        {
+        {      
           int j = neighbours.get(ii);
           a = new WB_M33(xlist.get(i).get(j).x * xlist.get(i).get(j).x, 
                          xlist.get(i).get(j).x * xlist.get(i).get(j).y,
@@ -456,7 +511,7 @@ import Jama.*;
         
       }
     }
-    
+    /*
     void _initM()
     {
       for (int i = 0; i < phyxels.length; i++)
@@ -464,6 +519,7 @@ import Jama.*;
         phyxels[i].mass = 1;
       }
     }
+    */
     
     void _initF()
     {

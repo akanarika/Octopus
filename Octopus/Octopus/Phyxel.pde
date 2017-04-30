@@ -9,6 +9,7 @@ class Phyxel
   float density;      // rho = sum_j(m_j * w_ij)
   float volume;       // v_i = m_i / rho_i
   float h;
+  float r;
   Vector3D matCoord;  // x
   Vector3D v;
   //Vector3D position;
