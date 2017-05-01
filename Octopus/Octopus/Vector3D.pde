@@ -40,6 +40,11 @@ class Vector3D
     return sqrt(x*x + y*y + z*z);
   }
   
+  public float magnitude2()
+  {
+    return x*x + y*y + z*z;
+  }
+  
   public Vector3D subtract(Vector3D aVector)
   {
     return new Vector3D(x - aVector.x, y - aVector.y, z - aVector.z);

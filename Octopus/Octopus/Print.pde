@@ -32,7 +32,20 @@ void printArrayList(String name, ArrayList<Float> list)
   for(int i = 0; i < list.size() / 8; i++)
   {
     for(int j = 0; j < 8; j++){
-      print(list.get(i));
+      print(list.get(i*8+j));
+      print(" ");
+    }
+    print("\n");
+  }
+}
+
+void printArrayListI(String name, ArrayList<Integer> list)
+{
+  print(name + ":\n");
+  for(int i = 0; i < list.size() / 8; i++)
+  {
+    for(int j = 0; j < 8; j++){
+      print(list.get(i*8+j));
       print(" ");
     }
     print("\n");

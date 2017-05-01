@@ -92,7 +92,7 @@ import processing.opengl.PGraphics3D;
       //setup_pixel_flow_monitor();
       
       // set up world
-      model = new DeformableModel(new Vector3D(8, 8, 8), 0.5f, mesh, 100, 0.4f);
+      model = new DeformableModel(new Vector3D(8, 8, 8), 0.5f, mesh, 300000, 0.4f);
       
       // setup skylight renderer
     }
