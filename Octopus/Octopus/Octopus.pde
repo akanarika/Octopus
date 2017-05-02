@@ -1,3 +1,5 @@
+import controlP5.*;
+
 import wblut.nurbs.*;
 import wblut.hemesh.*;
 import wblut.core.*;
@@ -37,9 +39,6 @@ import processing.core.PShape;
 import processing.opengl.PGraphics3D;
   
   
-  
-  
-  
     int viewport_w = 1280;
     int viewport_h = 720;
     int viewport_x = 230;
@@ -62,7 +61,18 @@ import processing.opengl.PGraphics3D;
     
     HE_Mesh mesh;
     WB_Render3D render;
+    ControlP5 cp5;
     
+     float Poisson_Ratio = 0.07f;
+     float Young_Variable = 4.45f;
+     int Young_Modulus = 5;  // Young's Modulus
+     float Mass_Variable = 1.0f;
+     float Mass_Density = 2.18f;
+     float Damping = 6.3f;
+     float kv = 10000.0f;  // spring constant   ( Energy = 1/2 kx^2, x = delta_distance)
+     int Neighbour_Count = 20;
+     boolean MOVE_CAM = false;
+     int Time_Step = 24;
     public void settings() {
       // Init the window
       size(viewport_w, viewport_h, P3D);
@@ -74,7 +84,7 @@ import processing.opengl.PGraphics3D;
       surface.setLocation(viewport_x, viewport_y);
       //peasyCam = new PeasyCam(this, -4.083,  -6.096,   7.000, 61);
            
-      cam = new PeasyCam(this, 0.000,  1.000,   0.000, 0.2);
+      cam = new PeasyCam(this, 0,  0,  0, 0.2);
     
       // projection
       perspective(60 * DEG_TO_RAD, width/(float)height, 2, 5000);
@@ -92,9 +102,11 @@ import processing.opengl.PGraphics3D;
       //setup_pixel_flow_monitor();
       
       // set up world
-      model = new DeformableModel(new Vector3D(8, 8, 8), 0.5f, mesh, 300000, 0.4f);
+      //model = new DeformableModel(new Vector3D(8, 8, 8), 1.20f, mesh, Poisson_Ratio, pow(10, Young_Modulus), kv, pow(10, Mass_Density), Damping, Neighbour_Count);
+      model = null;
       
       // setup skylight renderer
+      createGUI();
     }
     
     void setup_pixel_flow_monitor()
@@ -111,9 +123,7 @@ import processing.opengl.PGraphics3D;
       
     }
     
-    
-    
-    
+
     
     
     
@@ -126,20 +136,111 @@ import processing.opengl.PGraphics3D;
       //render_skylight();
       model.Update();
       render();
+      cam.setActive(MOVE_CAM);
+      displayGUI();
     
+    }
+    
+    void displayGUI()
+    {
+      noLights();
+      cam.beginHUD();
+      cp5.draw();
+      cam.endHUD();
+    }
+    
+    public void keyPressed(){
+    if(key == CODED){
+      if(keyCode == ALT){
+        MOVE_CAM = true;
+        }
+      }
+    }
+    
+     public void keyReleased(){
+      MOVE_CAM = false; 
+    }
+    
+    void createGUI()
+    {
+      cp5 = new ControlP5(this);
+      cp5.setAutoDraw(false);
+  
+      int sx, sy, px, py, oy;
+      sx = 100; sy = 50; oy = (int)(sy*0.2f);
+      Group group_physics = cp5.addGroup("global");
+      {
+        cp5.addSlider("Poisson_Ratio")
+         .setPosition(sx, sy)
+         .setRange(-1, 0.5)
+         ;
+         
+        cp5.addSlider("Young_Variable")
+         .setPosition(sx, sy * 2 + oy)
+         .setRange(1, 10)
+         ;
+         
+         cp5.addSlider("Young_Modulus")
+         .setPosition(sx, sy * 2 + oy * 2)
+         .setRange(1, 8)
+         ;
+         
+         cp5.addSlider("Mass_Variable")
+         .setPosition(sx, sy * 3 + oy)
+         .setRange(1, 10);
+         ;
+         
+         cp5.addSlider("Mass_Density")
+         .setPosition(sx, sy * 3 + oy * 2)
+         .setRange(1, 10);
+         ;
+         
+                  
+         cp5.addSlider("kv")
+         .setPosition(sx, sy * 4 + oy * 3)
+         .setRange(0, 100000);
+         ;
+         
+         cp5.addSlider("Damping")
+         .setPosition(sx, sy * 5 + oy * 4)
+         .setRange(0, 10);
+         ;
+         cp5.addSlider("Neighbour_Count")
+         .setPosition(sx, sy * 6 + oy * 5)
+         .setRange(1, 20);
+         ;
+         
+         cp5.addButton("restart")
+         .setPosition(sx, sy * 7 + oy * 6)
+         .setSize(200,19)
+         .setValue(0);
+         
+
+     ;
+         
+      }
+    }
+    
+    
+    void restart()
+    {
+      model = new DeformableModel(new Vector3D(8, 8, 8), 1.20f, mesh, Poisson_Ratio, Young_Variable * pow(10, Young_Modulus), 
+          kv, Mass_Variable * pow(10, Mass_Density), Damping, Neighbour_Count);
     }
     
     void render()
     {
-      background(255);
+      background(0);
       lights();
       directionalLight(255, 255, 255, -1, -1, -1);
 
-      shape(octopus, 0, 0);
+      //shape(octopus, 0, 0);
       strokeWeight(1);
       beginShape(POINTS);
       //world.draw();
-      model.draw(phyxelIdx);
+      if(model != null){
+        model.draw(phyxelIdx);
+      }
       if(keyPressed)
       {
         if(key == ' ')
@@ -147,14 +248,13 @@ import processing.opengl.PGraphics3D;
       }
       endShape();
       
-      translate(model.worldSize.x/2, model.worldSize.y/2, model.worldSize.z/2);
+      translate((float)model.worldSize.x/2, (float)model.worldSize.y/2, (float)model.worldSize.z/2);
       noFill();
-      box(model.worldSize.x, model.worldSize.y, model.worldSize.z);
+      box((float)model.worldSize.x, (float)model.worldSize.y, (float)model.worldSize.z);
     }
     
     void render_skylight()
     {
     }
-    
-   
+
         

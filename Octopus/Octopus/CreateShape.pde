@@ -15,7 +15,7 @@
             float u = r.getChild(i).getTextureU(j);
             float v = r.getChild(i).getTextureV(j);
             s.normal(n.x, n.y, n.z);
-            s.vertex(p.x, p.y, p.z, u, v);
+            s.vertex((float)p.x, (float)p.y, (float)p.z, (float)u, (float)v);
           }
         }
       }
@@ -39,7 +39,7 @@
             float u = r.getChild(i).getTextureU(j);
             float v = r.getChild(i).getTextureV(j);
             s.normal(n.x, n.y, n.z);
-            s.vertex(p.x, p.y, p.z, u, v);
+            s.vertex((float)p.x, (float)p.y, (float)p.z, (float)u, (float)v);
           }
         }
       }

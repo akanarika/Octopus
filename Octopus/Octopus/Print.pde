@@ -1,5 +1,8 @@
+Boolean printOn = false;
+
 void printM33(String name, WB_M33 matrix)
 {
+  if(!printOn) return;
   print (name + ":\n");
   print(matrix.m11 + " " + matrix.m12 + " " + matrix.m13 + "\n");
   print(matrix.m21 + " " + matrix.m22 + " " + matrix.m23 + "\n");
@@ -8,6 +11,7 @@ void printM33(String name, WB_M33 matrix)
 
 void printVecF(String name, WB_Vector vec)
 {
+  if(!printOn) return;
   print (name + ":\n");
   print(vec.xf() + " " + vec.yf() + " " + vec.zf() + "\n\n");
  
@@ -15,19 +19,42 @@ void printVecF(String name, WB_Vector vec)
 
 void printVec3D(String name, Vector3D vec)
 {
+  if(!printOn) return;
   print (name + ":\n");
   print(vec.x + " " + vec.y + " " + vec.z + "\n\n");
 }
 
 void printVar(String name, String variable)
 {
+  if(!printOn) return;
   print(name + ":\n");
-  print(variable);
+  print(variable +"\n");
 }
 
+void printVar(String name, int variable)
+{
+  if(!printOn) return;
+  print(name + ":\n");
+  print(variable + "\n");
+}
+
+void printVar(String name, float variable)
+{
+  if(!printOn) return;
+  print(name + ":\n");
+  print(variable + "\n");
+}
+
+void printVar(String name, double variable)
+{
+  if(!printOn) return;
+  print(name + ":\n");
+  print(variable + "\n");
+}
 
 void printArrayList(String name, ArrayList<Float> list)
 {
+  if(!printOn) return;
   print(name + ":\n");
   for(int i = 0; i < list.size() / 8; i++)
   {
@@ -41,6 +68,7 @@ void printArrayList(String name, ArrayList<Float> list)
 
 void printArrayListI(String name, ArrayList<Integer> list)
 {
+  if(!printOn) return;
   print(name + ":\n");
   for(int i = 0; i < list.size() / 8; i++)
   {
