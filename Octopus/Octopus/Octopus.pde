@@ -198,7 +198,7 @@ import processing.opengl.PGraphics3D;
                   
          cp5.addSlider("kv")
          .setPosition(sx, sy * 4 + oy * 3)
-         .setRange(0, 100000);
+         .setRange(0, 1000000);
          ;
          
          cp5.addSlider("Damping")

@@ -1,4 +1,4 @@
-Boolean printOn = false;
+Boolean printOn = true;
 
 void printM33(String name, WB_M33 matrix)
 {

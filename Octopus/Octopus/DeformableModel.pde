@@ -580,10 +580,10 @@ import Jama.*;
       //Get the distances of current point to all other points
       Vector3D vertPos = phyxels[index].matCoord;
       for(int i=0;i<phyxels.length; i++) {
-        //if(index!=i) {
+        if(index!=i) {
             IdxDist2Pair m = new IdxDist2Pair(i, vertPos.distance2(phyxels[i].matCoord));
             pq.offer(m);
-       // }
+        }
       }
       
       int iterNum = min(num, pq.size());
