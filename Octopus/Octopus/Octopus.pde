@@ -1,3 +1,4 @@
+
 import controlP5.*;
 
 import wblut.nurbs.*;
@@ -65,14 +66,16 @@ import processing.opengl.PGraphics3D;
     
      float Poisson_Ratio = 0.07f;
      float Young_Variable = 4.45f;
-     int Young_Modulus = 5;  // Young's Modulus
-     float Mass_Variable = 1.0f;
+     int Young_Modulus = 2;  // Young's Modulus
+     float Mass_Variable = 1.f;
      float Mass_Density = 2.18f;
+     
      float Damping = 6.3f;
      float kv = 10000.0f;  // spring constant   ( Energy = 1/2 kx^2, x = delta_distance)
      int Neighbour_Count = 20;
      boolean MOVE_CAM = false;
      int Time_Step = 24;
+     
     public void settings() {
       // Init the window
       size(viewport_w, viewport_h, P3D);
@@ -81,10 +84,10 @@ import processing.opengl.PGraphics3D;
     
     public void setup() {
       
-      surface.setLocation(viewport_x, viewport_y);
+      //surface.setLocation(viewport_x, viewport_y);
       //peasyCam = new PeasyCam(this, -4.083,  -6.096,   7.000, 61);
            
-      cam = new PeasyCam(this, 0,  0,  0, 0.2);
+      cam = new PeasyCam(this, 4,  4,  4,  10 );
     
       // projection
       perspective(60 * DEG_TO_RAD, width/(float)height, 2, 5000);
@@ -122,13 +125,7 @@ import processing.opengl.PGraphics3D;
     {
       
     }
-    
-
-    
-    
-    
-    
-    
+  
     int phyxelIdx = 0;
     public void draw() {
       
@@ -177,12 +174,12 @@ import processing.opengl.PGraphics3D;
          
         cp5.addSlider("Young_Variable")
          .setPosition(sx, sy * 2 + oy)
-         .setRange(1, 10)
+         .setRange(0, 10)
          ;
          
          cp5.addSlider("Young_Modulus")
          .setPosition(sx, sy * 2 + oy * 2)
-         .setRange(1, 8)
+         .setRange(0, 8)
          ;
          
          cp5.addSlider("Mass_Variable")
@@ -198,7 +195,7 @@ import processing.opengl.PGraphics3D;
                   
          cp5.addSlider("kv")
          .setPosition(sx, sy * 4 + oy * 3)
-         .setRange(0, 1000000);
+         .setRange(0, 10000);
          ;
          
          cp5.addSlider("Damping")

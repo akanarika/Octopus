@@ -17,7 +17,7 @@ import Jama.*;
    */ 
   
   int forceTime = 0;
-  final float gravity = -9.8f;
+  final float gravity = 9.8f;
   
   class DeformableModel {
           
@@ -61,6 +61,13 @@ import Jama.*;
       // Visualization Control
       Boolean gravityOn = true;
       Boolean []pinned;
+      
+      // Time 
+      long previousTime;
+      long currentTime;
+  
+      int deltaTime;
+      int leftOverDeltaTime;
 
     
     
@@ -73,7 +80,7 @@ import Jama.*;
        massDensity = density;
        damping = _damping;
        kv = _kv;  // spring constant   ( Energy = 1/2 kx^2, x = delta_distance)
-       DELTATIME = 1/100.0f;
+       DELTATIME = 1/60.0f;
       
         worldSize = _worldSize;
         searchR = _searchRadius;
@@ -168,7 +175,10 @@ import Jama.*;
       accumulator += (millis() - startTime) / 1000; 
       startTime = millis();
 
-      if ( accumulator >= DELTATIME )
+      //int timeStepAmt = (int)((float)(accumulator /(float) DELTATIME));
+      //timeStepAmt = min(5, timeStepAmt);
+      //for( int iter = 0; iter < timeStepAmt; iter ++)
+      if(accumulator > DELTATIME)
       {
         UpdatePhysics(DELTATIME);
         accumulator -= DELTATIME;
@@ -179,18 +189,50 @@ import Jama.*;
     void UpdatePhysics(float deltaTime)
     {
       // Update Internal and External Forces 
-      UpdateForces();
+        UpdateForces();   
+        //Verlet(deltaTime);
+        Integration(deltaTime);
       
-      // Integrate forces into displacement
-      Integration(deltaTime);
     }
+    
+    void Verlet(float dt)
+    {
+
+      for(int i = 0; i < phyxels.length; i++){
+        Vector3D v = phyxels[i].u.subtract(phyxels[i].lastu);
+      
+        v = v.mult(0.99f);
+        if(i == 0)
+          printVec3D("v", v);
+        float dt2 = dt * dt;
+        phyxels[i].acc = phyxels[i].f.mult(1.0f / phyxels[i].mass);
+        Vector3D newU = phyxels[i].u.add(v);
+        newU = newU.add(phyxels[i].acc.mult(dt2));
+        newU = newU.mult(0.5);
+
+      
+        phyxels[i].lastu = phyxels[i].u;
+        phyxels[i].u = newU;
+        
+        phyxels[i].acc = new Vector3D(0,0,0);
+      }
+    }
+    
     
     void Integration(float dt)
     {
+      
+      
       float dt2 = dt * dt;
       int iterNum = phyxels.length;
       for( int i=0; i< iterNum; i++)
       {
+        // check boundary
+        if (phyxels[i].u.y + phyxels[i].matCoord.y > worldSize.y)
+        {
+          phyxels[i].u.y = worldSize.y - phyxels[i].matCoord.y;
+          phyxels[i].f = phyxels[i].f.mult(-1);
+        }
         Vector3D f = phyxels[i].f;
         
         // Deal with Precision
@@ -198,7 +240,7 @@ import Jama.*;
         //if(abs(f.y) < 1.5f)  f.y = 0;
         //if(abs(f.z) < 1.5f)  f.z = 0;
         phyxels[i].f = f;
-        if(i==42) printVec3D("f", f);
+        //if(i==42) printVec3D("f", f);
         
         phyxels[i].acc = f.mult(1/(phyxels[i].mass));
         if(!pinned[i]){
@@ -207,18 +249,17 @@ import Jama.*;
           Vector3D _ab = (_b).add(_a);
           phyxels[i].u = phyxels[i].u.add(_ab);
         }
+        /*
         if(i == 42)
         {
           printVec3D("u", phyxels[i].u);
         }
+        */
         
-        // check boundary
-        if (phyxels[i].u.y + phyxels[i].matCoord.y <= 0)
-        {
-          phyxels[i].u.y = - phyxels[i].matCoord.y;
-        }
+     
        
       }
+      
       
       UpdateForces();
       for(int i = 0; i < phyxels.length; i++)
@@ -240,6 +281,7 @@ import Jama.*;
           if(abs(phyxels[i].v.y) < 0.01f)  phyxels[i].v.y = 0;
           if(abs(phyxels[i].v.z) < 0.01f)  phyxels[i].v.z = 0;
           */
+        
         }
         if(i == 42)
         {
@@ -249,6 +291,7 @@ import Jama.*;
         
       }
     }
+    
     
     void UpdateForces()
     {
@@ -267,8 +310,10 @@ import Jama.*;
         phyxels[i].f = initForce.mult(phyxels[i].mass);
         Vector3D velocityDamping = phyxels[i].v.mult(damping * phyxels[i].mass);
         phyxels[i].f = phyxels[i].f.subtract( velocityDamping );
-      }
       
+      }
+              // check boundary
+       
     }
     
     //  Force of each phyxel has to be initialized to 0 at each frame
@@ -307,13 +352,14 @@ import Jama.*;
         }
         
         
+        /*
         if(i == 42)
         {
           printVec3D("_u", _u);
           //printVec3D("_v", _v);
           //printVec3D("_w", _w);
         }
-        
+        */
                         
         WB_M33 A_inverse = AInvlist[i];
         
@@ -333,12 +379,17 @@ import Jama.*;
         // Compute Strain and Stress
         JT = new WB_M33(0,0,0,0,0,0,0,0,0);
         J.transposeInto(JT);
-
+        
         epsilon = new WB_M33(0,0,0,0,0,0,0,0,0);
         epsilon = JT;
         epsilon.mul(J);
         epsilon.sub(new WB_M33(1,0,0,0,1,0,0,0,1));
-
+        
+        if(epsilon.det() > 5)
+        {
+          epsilon.mul(epsilon.det()/5);
+        }
+  
         sigma = new WB_M33(0,0,0,0,0,0,0,0,0);
         sigma.m11 = C.x * epsilon.m11 + C.y * epsilon.m22 + C.y * epsilon.m33;
         sigma.m22 = C.y * epsilon.m11 + C.x * epsilon.m22 + C.y * epsilon.m33;
@@ -414,6 +465,7 @@ import Jama.*;
         _fi = new WB_Vector(0,0,0);
         _fi = WB_M33.mulToVector(Fe_add_Fv, di[i]);
         phyxels[i].f = phyxels[i].f.add(new Vector3D(_fi.coords()));
+        /*
         if(i == 42)
         {
           printM33("J", J);
@@ -425,6 +477,7 @@ import Jama.*;
           printVecF(i+ " fe", f_e);
           printVecF(i+" fv", f_v);
         }
+        */
       }
       
     }
@@ -580,10 +633,10 @@ import Jama.*;
       //Get the distances of current point to all other points
       Vector3D vertPos = phyxels[index].matCoord;
       for(int i=0;i<phyxels.length; i++) {
-        if(index!=i) {
+        //if(index!=i) {
             IdxDist2Pair m = new IdxDist2Pair(i, vertPos.distance2(phyxels[i].matCoord));
             pq.offer(m);
-        }
+       // }
       }
       
       int iterNum = min(num, pq.size());

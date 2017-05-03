@@ -15,6 +15,7 @@ class Phyxel
   Vector3D v;
   //Vector3D position;
   Vector3D u;
+  Vector3D lastu;
   Vector3D position;
   Vector3D f;
   Vector3D acc;
@@ -31,6 +32,7 @@ class Phyxel
     position = _matCoord;
     index = i;
     u = new Vector3D(0,0,0);
+    lastu = new Vector3D(0,0,0);
     v = new Vector3D(0,0,0);
     f = new Vector3D(0,0,0);
   }
