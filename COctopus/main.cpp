@@ -13,10 +13,10 @@ using namespace std;
 
 const int width = 1024, height = 1024;
 
-int numX = 10, numY=5, numZ=5;
+int numX = 5, numY=20, numZ=5;
 const int num_particle = numX*numY*numZ;
-int sizeX = 4;
-int sizeY = 1;
+int sizeX = 1;
+int sizeY = 4;
 int sizeZ = 1;
 float hsizeX = sizeX/2.0f;
 float hsizeY = sizeY/2.0f;
@@ -206,15 +206,15 @@ void OnMouseDown(int button, int s, int x, int y)
         float norm_x = float(window_x)/float(width/2.0);
         
         float winZ=0;
-        glReadPixels( x, height-y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ );
+        glReadPixels(x, height-y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ);
         if(winZ==1)
             winZ=0;
         double objX=0, objY=0, objZ=0;
-        gluUnProject(window_x,window_y, winZ,  MV,  P, viewport, &objX, &objY, &objZ);
-        glm::vec3 pt(objX,objY, objZ);
+        gluUnProject(window_x,window_y, winZ, MV, P, viewport, &objX, &objY, &objZ);
+        glm::vec3 pt(objX, objY, objZ);
         int i=0;
         for(i=0;i<num_particle;i++) {
-            if( glm::distance(phyxels[i]->X,pt)<0.1) {
+            if( glm::distance(phyxels[i]->X,pt)<1) {
                 selected_index = i;
                 printf("Intersected at %d\n",i);
                 break;
@@ -319,10 +319,13 @@ void InitGL() {
     for(k = 0; k < numZ; k++) {
         for(j = 0; j < numY; j++) {
             for(i = 0; i < numX; i++) {
-                phyxels[count++]->setX(glm::vec3(((float(i)/(numX-1)) )*  sizeX,
+                phyxels[count++]->setX(glm::vec3(((float(i)/(numX-1)) ) *  sizeX,
                                        ((float(j)/(numY-1))*2-1)* hsizeY + ypos,
                                        ((float(k)/(numZ-1))*2-1)* hsizeZ));
                 phyxels[count-1]->setXi(phyxels[count-1]->X);
+                if (phyxels[count-1]->X.y == ypos + hsizeY){
+                    phyxels[count-1]->isFixed = true;
+                }
                 
             }
         }
