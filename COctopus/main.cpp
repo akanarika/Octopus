@@ -1,6 +1,6 @@
 // Octopus in C++
 #include <GL/glew.h>
-#include <GL/glut.h>
+#include <GLUT/glut.h>
 #include <algorithm>
 #include <vector>
 #include <glm/glm.hpp>
@@ -31,6 +31,7 @@ int selected_index = -1;
 
 int oldX=0, oldY=0;
 float rX=15, rY=0;
+float tY = -3;
 int state =1 ;
 float dist=-23;
 const int GRID_SIZE=10;
@@ -141,7 +142,7 @@ void OnRender() {
     glutSetWindowTitle("DDD");
     glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
-    glTranslatef(0,0,dist);
+    glTranslatef(0,tY,dist);
     glRotatef(rX,1,0,0);
     glRotatef(rY,0,1,0);
     
@@ -156,13 +157,13 @@ void OnRender() {
     glBegin(GL_POINTS);
     for(i=0;i<num_particle;i++) {
         glm::vec3 p = phyxels[i]->X;
-        /*
+        
         if(i==selected_index)
             glColor3f(0,1,1);
         else
             glColor3f(1,0,0);
-            */
-        glColor3f(1,1,1);
+            
+        //glColor3f(1,1,1);
         glVertex3f(p.x,p.y,p.z);
     }
     
@@ -200,21 +201,38 @@ void OnMouseDown(int button, int s, int x, int y)
     {
         oldX = x;
         oldY = y;
-        int window_y = (height - y);
-        float norm_y = float(window_y)/float(height/2.0);
+
+        GLfloat window_x, window_y, window_z;
+        GLdouble objX, objY, objZ;
+
+        window_x = (float) x;
+        window_y = viewport[3] - (float) y;
+        //int window_y = (height - y);
+        /*
+        int window_y = viewport[3] - y;
         int window_x = x ;
-        float norm_x = float(window_x)/float(width/2.0);
+        */
+        //float norm_y = float(window_y)/float(height/2.0);
+        //float norm_y = float(window_y)/float(height);
         
-        float winZ=0;
-        glReadPixels(x, height-y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ);
-        if(winZ==1)
-            winZ=0;
+        //float norm_x = float(window_x)/float(width/2.0);
+        //float norm_x = float(window_x)/float(width);
+        
+        //float winZ=0;
+        glReadPixels(x, (int)window_y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &window_z);
+        //glReadPixels(x, height-y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ);
+        
+        //if(window_z==1)
+            //window_z=0;
+            
+        /*
         double objX=0, objY=0, objZ=0;
-        gluUnProject(window_x,window_y, winZ, MV, P, viewport, &objX, &objY, &objZ);
+        */
+        gluUnProject(window_x, window_y, window_z, MV, P, viewport, &objX, &objY, &objZ);
         glm::vec3 pt(objX, objY, objZ);
         int i=0;
         for(i=0;i<num_particle;i++) {
-            if( glm::distance(phyxels[i]->X,pt)<1) {
+            if( glm::distance(phyxels[i]->X,pt)<.1) {
                 selected_index = i;
                 printf("Intersected at %d\n",i);
                 break;
