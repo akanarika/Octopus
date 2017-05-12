@@ -5,100 +5,115 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <sys/time.h>
-#include "phyxel.h"
 
-#define _USE_MATH_DEFINES
+// Phyxel Class
+#include "phyxel.h"
+// Class to load the object
+// Reference from http://www.opengl-tutorial.org/
+// beginners-tutorials/tutorial-7-model-loading/
+#include "objloader.hpp"
+
+// Window size
+#define width 1024
+#define height 800
+#define grid_size 12
+#define point_size 5
 
 using namespace std;
 
-const int width = 1024, height = 1024;
+// time_step
+float time_step =  0.25f;
+float curr_time = 0;
+double total_time = time_step;
 
-int numX = 5, numY=20, numZ=5;
-const int num_particle = numX*numY*numZ;
-int sizeX = 1;
-int sizeY = 4;
-int sizeZ = 1;
-float hsizeX = sizeX/2.0f;
-float hsizeY = sizeY/2.0f;
-float hsizeZ = sizeZ/2.0f;
-
-bool bShowForces=false, bShowJacobians=false;
-
-float timeStep =  10/60.0f;
-float currentTime = 0;
-double accumulator = timeStep;
+// Selected vertex index
 int selected_index = -1;
 
-int oldX=0, oldY=0;
-float rX=15, rY=0;
-float tY = -3;
-int state =1 ;
-float dist=-23;
-const int GRID_SIZE=10;
-float pointSize = 10;
-float spacing =  float(sizeX)/(numX+1);                         // Spacing of particles
-
-glm::vec3 gravity=glm::vec3(0.0f,-9.81f,0.0f);
-
+// For camera control
+float rot_x = 15;
+float rot_y = 0;
+float t_y = -3;
+float dist = -23;
+int mmb_click = 1;
+glm::vec3 Up = glm::vec3(0,1,0);
+glm::vec3 Right;
+glm::vec3 view_dir;
 GLint viewport[4];
 GLdouble MV[16];
 GLdouble P[16];
 
-glm::vec3 Up=glm::vec3(0,1,0), Right, viewDir;
+// Define gravity vector
+glm::vec3 gravity=glm::vec3(0.0f,-9.81f,0.0f);
 
-struct timeval t1, t2;           // ticks
-double frameTimeQP=0;
-float frameTime =0 ;
+// Time step
+struct timeval t1, t2;
+double frame_timestep = 0;
+float frame_time = 0;
+float start_time = 0, fps = 0;
+int frame_count = 0;
 
-float startTime =0, fps=0;
-int totalFrames=0;
+// Initialize for math
+// Poisson ratio
+float poisson =  0.4f;
+// Young modulus
+float young = 300.0f;
+// Material density
+float density = 10000.f;
+// K
+float kv = 100;
+// Damping of velocity
+float damping = 50.0f;
 
-int whichIndex = 0;
-char info[256]={0};
-
-glm::mat3       I=glm::mat3(1);         //identity matrix
-float nu =  0.4f;               //Poisson ratio
-float Y = 300.0f;            //Young modulus
-float density = 10000.f;        //material density
-float kv=100, damping=50.0f;   //constant used in Eq. 22 page 5
-float d15 = Y / (1.0f + nu) / (1.0f - 2 * nu);
-float d16 = (1.0f - nu) * d15;
-float d17 = nu * d15;
-float d18 = Y / 2 / (1.0f + nu);
+// Calculation for C
+float d15 = young / (1.0f + poisson) / (1.0f - 2 * poisson);
+float d16 = (1.0f - poisson) * d15;
+float d17 = poisson * d15;
+float d18 = young / 2 / (1.0f + poisson);
 glm::vec3 D(d16, d17, d18);
+glm::mat3 I = glm::mat3(1);
 
-float scFac = 0; //scaling constant
-
+// Phyxels
 vector<Phyxel*> phyxels;
 
+// Loading model info
+vector< glm::vec3 > vertices;
+vector< glm::vec2 > uvs;
+vector< glm::vec3 > normals;
+bool res = loadOBJ("oct.obj", vertices, uvs, normals);
+
+const int num_particle = vertices.size();
+float scale = 0;
+
+// Functions for GL
 void OnRender();
 void OnReshape(int nw, int nh);
 void OnIdle();
 void OnMouseMove(int x, int y);
 void OnMouseDown(int button, int s, int x, int y);
-void OnKey(unsigned char k,int , int);
+void DrawGrid();
 void InitGL();
 
-void GetKNearestNeighbors(int index, int k, vector<float>& dis, vector<Neighbor>& n);
-void ComputeRadiusAndSupportRadii(vector<float> &dists, float& r, float& h);
-void FillNeighs(int index);
-void ComputeScalingConstant();
-void ComputeMass(float dm, int index);
+// Functions for computing initial values
+void GetNeighbors(int index, int k, vector<float>& dis, vector<Neighbor>& n);
+void ComputeRadius(vector<float> &dists, float& r, float& h);
+void SetNeighbors(int index);
+void GetFactor();
+void ComputeM(float dm, int index);
+void ComputeRhoVolume(int index);
+void ComputeInverseA(int index);
 
-void ComputeDensityAndVolume(int index);
-void ComputeInvMomentMatrix(int index);
-
-void StepPhysics(float dt);
-void UpdateForces();
-void ComputeJacobians();
-void ComputeStrainAndStress();
-void IntegrateLeapFrog(float dt);
+// Functions for compute update values
+void ComputeLoop(float dt);
+void UpdateF();
+void ComputeJ();
+void ComputeF();
+void UpdatePos(float dt);
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutInitWindowSize(width, height);
-    glutCreateWindow("DDD ---- ");
+    glutCreateWindow("Octopus");
     
     glutDisplayFunc(OnRender);
     glutReshapeFunc(OnReshape);
@@ -107,7 +122,6 @@ int main(int argc, char** argv) {
     glutMouseFunc(OnMouseDown);
     glutMotionFunc(OnMouseMove);
     
-    glutKeyboardFunc(OnKey);
     glewInit();
     
     // Initialize
@@ -119,57 +133,72 @@ int main(int argc, char** argv) {
 }
 
 void OnRender() {
-    int i=0;
-    float newTime = (float) glutGet(GLUT_ELAPSED_TIME);
-    frameTime = newTime-currentTime;
-    currentTime = newTime;
-    
+    int i = 0;
+    float new_time = (float) glutGet(GLUT_ELAPSED_TIME);
+    frame_time = new_time - curr_time;
+    curr_time = new_time;
     gettimeofday(&t2, NULL);
-    frameTimeQP = (t2.tv_sec - t1.tv_sec) * 1000000.0;
-    t1=t2;
-    accumulator += frameTimeQP;
+    frame_timestep = (t2.tv_sec - t1.tv_sec) * 1000000.0;
+    t1 = t2;
+    total_time += frame_timestep;
+
+    ++frame_count;
     
-    ++totalFrames;
-    
-    if((newTime-startTime)>100)
+    if((new_time-start_time) > 100)
     {
-        float elapsedTime = (newTime-startTime);
-        fps = (totalFrames/ elapsedTime)*100000 ;
-        startTime = newTime;
-        totalFrames = 0;
+        float elapsedTime = new_time - start_time;
+        fps = (frame_count / elapsedTime) * 100000.0;
+        start_time = new_time;
+        frame_count = 0;
     }
     
-    glutSetWindowTitle("DDD");
-    glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
+    glutSetWindowTitle("Octopus");
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
-    glTranslatef(0,tY,dist);
-    glRotatef(rX,1,0,0);
-    glRotatef(rY,0,1,0);
+    glTranslatef(0, t_y, dist);
+    glRotatef(rot_x, 1, 0, 0);
+    glRotatef(rot_y, 0, 1, 0);
     
     glGetDoublev(GL_MODELVIEW_MATRIX, MV);
-    viewDir.x = (float)-MV[2];
-    viewDir.y = (float)-MV[6];
-    viewDir.z = (float)-MV[10];
-    Right = glm::cross(viewDir, Up);
+    view_dir.x = (float)-MV[2];
+    view_dir.y = (float)-MV[6];
+    view_dir.z = (float)-MV[10];
+    Right = glm::cross(view_dir, Up);
     
-    
+    //draw grid
+    DrawGrid();
+
     //draw points
     glBegin(GL_POINTS);
-    for(i=0;i<num_particle;i++) {
+    for(i = 0; i < num_particle; i++) {
         glm::vec3 p = phyxels[i]->X;
         
         if(i==selected_index)
-            glColor3f(0,1,1);
+            glColor3f(1,1,1);
         else
-            glColor3f(1,0,0);
+            glColor3f(0.3,0.3,0.3);
             
-        //glColor3f(1,1,1);
         glVertex3f(p.x,p.y,p.z);
     }
     
     glEnd();
     
     glutSwapBuffers();
+}
+
+void DrawGrid()
+{
+    glBegin(GL_LINES);
+    glColor3f(0.05f, 0.05f, 0.05f);
+    for(int i = -grid_size; i <= grid_size; i++)
+    {
+        glVertex3f((float)i,0,(float)-grid_size);
+        glVertex3f((float)i,0,(float)grid_size);
+        
+        glVertex3f((float)-grid_size,0,(float)i);
+        glVertex3f((float)grid_size,0,(float)i);
+    }
+    glEnd();
 }
 
 void OnReshape(int nw, int nh) {
@@ -186,48 +215,31 @@ void OnReshape(int nw, int nh) {
 
 void OnIdle() {
     
-    if ( accumulator >= timeStep )
+    if ( total_time >= time_step )
     {
-        StepPhysics(timeStep);
-        accumulator -= timeStep;
+        ComputeLoop(time_step);
+        total_time -= time_step;
     }
     
     glutPostRedisplay();
 }
 
+int prev_x=0, prev_y=0;
 void OnMouseDown(int button, int s, int x, int y)
 {
     if (s == GLUT_DOWN)
     {
-        oldX = x;
-        oldY = y;
+        prev_x = x;
+        prev_y = y;
 
         GLfloat window_x, window_y, window_z;
         GLdouble objX, objY, objZ;
 
         window_x = (float) x;
         window_y = viewport[3] - (float) y;
-        //int window_y = (height - y);
-        /*
-        int window_y = viewport[3] - y;
-        int window_x = x ;
-        */
-        //float norm_y = float(window_y)/float(height/2.0);
-        //float norm_y = float(window_y)/float(height);
-        
-        //float norm_x = float(window_x)/float(width/2.0);
-        //float norm_x = float(window_x)/float(width);
-        
-        //float winZ=0;
+
         glReadPixels(x, (int)window_y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &window_z);
-        //glReadPixels(x, height-y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &winZ);
         
-        //if(window_z==1)
-            //window_z=0;
-            
-        /*
-        double objX=0, objY=0, objZ=0;
-        */
         gluUnProject(window_x, window_y, window_z, MV, P, viewport, &objX, &objY, &objZ);
         glm::vec3 pt(objX, objY, objZ);
         int i=0;
@@ -241,9 +253,9 @@ void OnMouseDown(int button, int s, int x, int y)
     }
     
     if(button == GLUT_MIDDLE_BUTTON)
-        state = 0;
+        mmb_click = 0;
     else
-        state = 1;
+        mmb_click = 1;
     
     if(s==GLUT_UP) {
         selected_index= -1;
@@ -254,17 +266,17 @@ void OnMouseDown(int button, int s, int x, int y)
 void OnMouseMove(int x, int y)
 {
     if(selected_index == -1) {
-        if (state == 0)
-            dist *= (1 + (y - oldY)/60.0f);
+        if (mmb_click == 0)
+            dist *= (1 + (y - prev_y)/60.0f);
         else
         {
-            rY += (x - oldX)/5.0f;
-            rX += (y - oldY)/5.0f;
+            rot_y += (x - prev_x)/5.0f;
+            rot_x += (y - prev_y)/5.0f;
         }
     } else {
         float delta = 1500/abs(dist);
-        float valX = (x - oldX)/delta;
-        float valY = (oldY - y)/delta;
+        float valX = (x - prev_x)/delta;
+        float valY = (prev_y - y)/delta;
         if(abs(valX)>abs(valY))
             glutSetCursor(GLUT_CURSOR_LEFT_RIGHT);
         else
@@ -279,47 +291,15 @@ void OnMouseMove(int x, int y)
         
         phyxels[selected_index]->v = glm::vec3(0);
     }
-    oldX = x;
-    oldY = y;
+    prev_x = x;
+    prev_y = y;
     
     glutPostRedisplay();
-}
-
-void OnKey(unsigned char k,int , int) {
-    switch(k) {
-        case 'a':whichIndex--;break;
-        case 'd':whichIndex++;break;
-        case ',':Y-=500;break;
-        case '.':Y+=500;break;
-        case '[':nu-=0.01f;break;
-        case ']':nu+=0.01f;break;
-    }
-
-    if(nu>0.49999f)     nu=0.49f;
-    if(nu<0)            nu=0;
-    if(Y<0.01f)         Y=0.01f;
-    if(Y>175000000)     Y=175000000;
-    if(whichIndex<0)    whichIndex = 0;
-    
-    /* Update D */
-    d15 = Y / (1.0f + nu) / (1.0f - 2 * nu);
-    d16 = (1.0f - nu) * d15;
-    d17 = nu * d15;
-    d18 = Y / 2 / (1.0f + nu);
-
-    D.x=d16;
-    D.y=d17;
-    D.z=d18;
-
-    whichIndex = (whichIndex%num_particle);
-
-    glutPostRedisplay();
-    
 }
 
 void InitGL() {
-    startTime = (float)glutGet(GLUT_ELAPSED_TIME);
-    currentTime = startTime;
+    start_time = (float)glutGet(GLUT_ELAPSED_TIME);
+    curr_time = start_time;
     
     gettimeofday(&t1, NULL);
     
@@ -334,67 +314,60 @@ void InitGL() {
         phyxels.push_back(phyxel);
     }
     
-    for(k = 0; k < numZ; k++) {
-        for(j = 0; j < numY; j++) {
-            for(i = 0; i < numX; i++) {
-                phyxels[count++]->setX(glm::vec3(((float(i)/(numX-1)) ) *  sizeX,
-                                       ((float(j)/(numY-1))*2-1)* hsizeY + ypos,
-                                       ((float(k)/(numZ-1))*2-1)* hsizeZ));
-                phyxels[count-1]->setXi(phyxels[count-1]->X);
-                if (phyxels[count-1]->X.y == ypos + hsizeY){
-                    phyxels[count-1]->isFixed = true;
-                }
-                
-            }
-        }
+    printf("vertices size: %lu\n", vertices.size());
+
+    for (i = 0; i < vertices.size(); i++) {
+        phyxels[i]->setX(glm::vec3(vertices[i].x * 3,
+                    vertices[i].y * 3 + 4, vertices[i].z * 3));
+        phyxels[i]->setXi(phyxels[i]->X);
+        // phyxels[i]->isFixed = (vertices[i].y > 2);
     }
     
-    for(i = 0; i < num_particle; ++i) {
+    
+    for (i = 0; i < num_particle; ++i) {
         vector<float> dist;
-        GetKNearestNeighbors(i, 10, dist, phyxels[i]->neighbors);
-        ComputeRadiusAndSupportRadii(dist, phyxels[i]->r, phyxels[i]->h);
+        GetNeighbors(i, 10, dist, phyxels[i]->neighbors);
+        ComputeRadius(dist, phyxels[i]->r, phyxels[i]->h);
     }
     
-    for(i = 0; i < num_particle; i++) {
-        FillNeighs(i);
+    for (i = 0; i < num_particle; i++) {
+        SetNeighbors(i);
     }
     
-    ComputeScalingConstant();
+    GetFactor();
     
     for(i=0; i < num_particle; ++i)
-        ComputeMass(density, i);
+        ComputeM(density, i);
     
     for(i=0; i < num_particle; ++i)
-        ComputeDensityAndVolume(i);
+        ComputeRhoVolume(i);
     
     for(i=0; i < num_particle; ++i) {
-        ComputeInvMomentMatrix(i);
+        ComputeInverseA(i);
     }
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    //glPolygonMode(GL_BACK, GL_LINE);
-    glPointSize(pointSize );
+    glPointSize(point_size );
     
-    //wglSwapIntervalEXT(0);
 }
 
 
-typedef std::pair<int, float> mypair;
+typedef std::pair<int, float> idx_to_dist;
 
 struct Cmp {
-    bool operator()(const mypair &lhs, const mypair &rhs) {
+    bool operator()(const idx_to_dist &lhs, const idx_to_dist &rhs) {
         return lhs.second < rhs.second;
     }
 };
 
-void GetKNearestNeighbors(int index, int k, vector<float>& dis, vector<Neighbor>& n) {
+void GetNeighbors(int index, int k, vector<float>& dis, vector<Neighbor>& n) {
     
-    vector<mypair> distances;
+    vector<idx_to_dist> distances;
 
     //Get the distances of current point to all other points
     for(int i = 0; i < num_particle; i++) {
         if(index!=i) {
-            mypair m;
+            idx_to_dist m;
             m.first = i;
             m.second= fabs(glm::distance(phyxels[index]->X, phyxels[i]->X));
             distances.push_back(m);
@@ -413,7 +386,7 @@ void GetKNearestNeighbors(int index, int k, vector<float>& dis, vector<Neighbor>
     }
 }
 
-void ComputeRadiusAndSupportRadii(vector<float> &dists, float& r, float& h)
+void ComputeRadius(vector<float> &dists, float& r, float& h)
 {
     //For this read section 3.2 Initialization on page 4
     //look through all neigbour distances
@@ -427,7 +400,7 @@ void ComputeRadiusAndSupportRadii(vector<float> &dists, float& r, float& h)
     h = 3.0f * r;
 }
 
-void FillNeighs(int index)
+void SetNeighbors(int index)
 {
     //For this read section 3.2 Initialization on page 4
     //Based on Eq. 9
@@ -444,8 +417,8 @@ void FillNeighs(int index)
     }
 }
 
-void ComputeScalingConstant() {
-    scFac = 0.f;
+void GetFactor() {
+    scale = 0.f;
     int i=0;
     for ( i =0; i < num_particle; i++ ) {
         float sum = 0.f;
@@ -454,22 +427,20 @@ void ComputeScalingConstant() {
         for(size_t j = 0; j < pNeighbor.size(); j++) {
             sum += pow(phyxels[pNeighbor[j].j]->r, 3) * pNeighbor[j].w;
         }
-        scFac += 1.0f / sum;
+        scale += 1.0f / sum;
     }
     // This is the common scaling factor to compute the mass of each phyxel.
     // See last paragraph of Section 3.2 on page 4
-    scFac /= num_particle;
-
-    printf("Scaling factor: %3.3f\n", scFac);
+    scale /= num_particle;
 }
 
-void ComputeMass(float dm, int index)
+void ComputeM(float dm, int index)
 {
     // See last paragraph of Section 3.2 on page 4
-    phyxels[index]->m = scFac * pow(phyxels[index]->r, 3) * dm;
+    phyxels[index]->m = scale * pow(phyxels[index]->r, 3) * dm;
 }
 
-void ComputeDensityAndVolume(int index)
+void ComputeRhoVolume(int index)
 {
     // See last paragraph of Section 3.2 on page 4
     phyxels[index]->rho = 0.f;
@@ -479,7 +450,7 @@ void ComputeDensityAndVolume(int index)
     phyxels[index]->vol =  phyxels[index]->m / phyxels[index]->rho;
 }
 
-void ComputeInvMomentMatrix(int index)
+void ComputeInverseA(int index)
 {
     glm::mat3 A, A_sum, V;
     A =glm::mat3(0);
@@ -513,17 +484,17 @@ void ComputeInvMomentMatrix(int index)
     }
 }
 
-void StepPhysics(float dt) {
-    UpdateForces();
-    IntegrateLeapFrog(dt);
+void ComputeLoop(float dt) {
+    UpdateF();
+    UpdatePos(dt);
 }
 
-void UpdateForces()
+void UpdateF()
 {
     //Calculate external force
     for(int i=0;i<num_particle;i++) {
         if(!phyxels[i]->isFixed)
-            phyxels[i]->F = glm::vec3(0,gravity.y,0);
+            phyxels[i]->F = gravity;
         else
             phyxels[i]->F = glm::vec3(0);
 
@@ -531,9 +502,9 @@ void UpdateForces()
         phyxels[i]->F -= phyxels[i]->v * damping;
     }
 
-    ComputeJacobians();
+    ComputeJ();
 
-    ComputeStrainAndStress();
+    ComputeF();
 
 
     //Calculate internal force using the stress and Jacobians
@@ -559,7 +530,7 @@ void UpdateForces()
     }
 }
 
-void ComputeJacobians()
+void ComputeJ()
 {
     for(int i=0;i<num_particle;i++) {
         vector<Neighbor>& pNeighbor = phyxels[i]->neighbors;
@@ -591,7 +562,7 @@ void ComputeJacobians()
 
 }
 
-void ComputeStrainAndStress()
+void ComputeF()
 {
     for(int i=0;i<num_particle;i++) {
         glm::mat3 Jtr = glm::transpose(phyxels[i]->J);
@@ -614,7 +585,7 @@ void ComputeStrainAndStress()
     }
 }
 
-void IntegrateLeapFrog(float dt) {
+void UpdatePos(float dt) {
     int i=0;
     float dt2 = dt*dt;
     float half_dt2 = dt2*0.5f;
@@ -635,7 +606,7 @@ void IntegrateLeapFrog(float dt) {
         }
     }
     //Calculate the new acceleration
-    UpdateForces();
+    UpdateF();
 
     //V_(i+1) = V_i + ((a_i+a_(i+1))/2)*dt^2
     for(i=0;i<num_particle;i++) {
