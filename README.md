@@ -73,9 +73,11 @@ Besides understanding the algorithm, the biggest challenge for us were understan
 ### Result
 We switched the platform at last because of some issue we cannot solve in Processing. The following is the OpenGL result.
 Here’s the point-based Octopus. The model is not volumetric so it looks a little hollow, but it still shows elasticity property.
+
 [![](http://img.youtube.com/vi/OO1hlp3pIhA/0.jpg)](http://www.youtube.com/watch?v=OO1hlp3pIhA)
 
 We couldn’t make volumetric point cloud model because of the limitation on the number of points. So here we demonstrate a cube with the volumetric point cloud and the result is better.
+
 [![](http://img.youtube.com/vi/ZibWir2ZDH4/0.jpg)](http://www.youtube.com/watch?v=ZibWir2ZDH4)
 
 
@@ -108,6 +110,7 @@ We also begin to look at the physics parameters. One of the thing we found was t
 Finally we switched to OpenGL and it solve the problem. We guess it is because of the library we use have some accuracy issue.
 
 Here we enclose a video of the issue in the Processing version:
+
 [![](http://img.youtube.com/vi/oa52uv9yDgU/0.jpg)](http://www.youtube.com/watch?v=oa52uv9yDgU)
 
 
