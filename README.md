@@ -1,13 +1,16 @@
 # Octopus - Final Project Proposal
 
+
 ### Problem statement / goals
 Octopus is a mysterious animal. Its body is elastic and has no internal or external skeletons, so it has no problem using extreme deformation to squeeze through tight places. Among many other interesting and difficult problems to solve about Octopus, mimicking this elastic property is a charming one to explore in Computer Graphics. 
 
 The application of point-based techniques is explained in [[1]](#1). According to it, point sampled objects do neither have to store nor to maintain globally consistent topological information, which makes it more ideal than triangle meshes when it comes to handling dynamic changing shapes. 
 In this project, we want to use this point-based technique to best represent the elastic material of the octopus, and demonstrate it through simple interactions.
 
+
 ### Approach
 We first convert an octopus model into point cloud, and input it into the program. We then follow the steps described in [[2]](#2) to model the elastic property. To demonstrate the result, we add interaction to drag points around and see what happens to the whole model.
+
 - Overview
 Here’s an overview of the program structure: 
 
@@ -25,7 +28,8 @@ Another energy is the volume conservation energy. It works as a spring to drag t
 
 where kv is a constant, J is the Jacobian of displacement, u and U are the displacement and energy.
 The algorithm relies on a balance of these two forces, and the physics parameters are quite important. 
--   Initialization
+
+- Initialization
 
 We need to first initialize the phyxels’ constants. The mesh – free model is not simply points without connections. Every point/phyxel has its mass, density and volume. The mass is distributed around the phyxel with the following distribution function:
 
@@ -34,6 +38,7 @@ We need to first initialize the phyxels’ constants. The mesh – free model is
 where r is the distance to the phyxel and h is the support of the kernel, which is set to 3 * average_r for each phyxel in our case. At first, we need to input a mass density. Then the mass density on each point needs to be initialized as ![](5.png) so that it is close to the mass density we input. We calculate volume by dividing mass by the density.
 
 - Update 
+
 The update step is as follow:  
 
 ![](6.png)
@@ -55,7 +60,8 @@ where
  
 ![](10.png)
 
--   Physics Parameters
+- Physics Parameters
+
 Besides understanding the algorithm, the biggest challenge for us were understanding the physics parameters. All the physics parameters that can be adjusted in our algorithms are:
 *  Time step, which needs to be very small (e.g. 1/60).
 *   Young’s Modulus and Poisson Ratio are the parameters for elasticity model. In the paper, Young’s Modulus is 10^5 – 10^9, and we looked up Poisson Ratio to be between -1 and 0.5. However, we didn’t get a stable result from these parameters. 
@@ -67,10 +73,11 @@ Besides understanding the algorithm, the biggest challenge for us were understan
 ### Result
 We switched the platform at last because of some issue we cannot solve in Processing. The following is the OpenGL result.
 Here’s the point-based Octopus. The model is not volumetric so it looks a little hollow, but it still shows elasticity property.
-{% vimeo 217219405 %}
+[![](http://img.youtube.com/vi/OO1hlp3pIhA/0.jpg)](http://www.youtube.com/watch?v=OO1hlp3pIhA)
 
 We couldn’t make volumetric point cloud model because of the limitation on the number of points. So here we demonstrate a cube with the volumetric point cloud and the result is better.
-{% vimeo 217219383 %}
+[![](http://img.youtube.com/vi/ZibWir2ZDH4/0.jpg)](http://www.youtube.com/watch?v=ZibWir2ZDH4)
+
 
 ### Resources
 We used Processing with Java for this project for its great interaction features. However, when we come to realize it, we encountered some problems that’s hard to solve. Because of that, we switched to Opengl with C++.
@@ -101,8 +108,8 @@ We also begin to look at the physics parameters. One of the thing we found was t
 Finally we switched to OpenGL and it solve the problem. We guess it is because of the library we use have some accuracy issue.
 
 Here we enclose a video of the issue in the Processing version:
+[![](http://img.youtube.com/vi/oa52uv9yDgU/0.jpg)](http://www.youtube.com/watch?v=oa52uv9yDgU)
 
-{% vimeo 217221916 %}
 
 ### Pros and Cons of the System
 The implementation of the system is simple and straightforward. The algorithm can be easily applied to other models with enough point density but not so many points. 
