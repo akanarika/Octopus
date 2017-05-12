@@ -7,6 +7,7 @@ Octopus is a mysterious animal. Its body is elastic and has no internal or exter
 The application of point-based techniques is explained in [[1]](#1). According to it, point sampled objects do neither have to store nor to maintain globally consistent topological information, which makes it more ideal than triangle meshes when it comes to handling dynamic changing shapes. 
 In this project, we want to use this point-based technique to best represent the elastic material of the octopus, and demonstrate it through simple interactions.
 
+![](oct.png)
 
 ### Approach
 We first convert an octopus model into point cloud, and input it into the program. We then follow the steps described in [[2]](#2) to model the elastic property. To demonstrate the result, we add interaction to drag points around and see what happens to the whole model.
@@ -86,6 +87,7 @@ We used Processing with Java for this project for its great interaction features
 Here’re the processing libraries we used:
 *   Peasy Cam, a mouse driven camera-control library for 3D sketches.
 *   HE_Mesh, a library to load models and has math functions
+
 Here’s the C++ libraries we used:
 *   glm, opengl mathematics
 *   glut, opengl utility toolkit
