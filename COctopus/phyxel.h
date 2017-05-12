@@ -17,30 +17,29 @@ public:
     Phyxel();
     void setX(glm::vec3 pos);
     void setXi(glm::vec3 pos);
-    glm::vec3 Xi; //init pos
-    glm::vec3 X;  //curr pos
-    glm::vec3 U;  //displacements
+    glm::vec3 Xi;  // Original material coordinates
+    glm::vec3 X;  // Current coordinates
+    glm::vec3 U;  // Displacement
 
-    float m; //mass
-    glm::mat3 Ai;
+    float m;  // Mass
+    glm::mat3 Ai;  // Inversed A Matirx
 
     glm::vec3 di;
-    glm::mat3 sigma;  //stress
-    glm::mat3 epsilon;  //strains
-    glm::mat3 J;  //Jacobian
-    glm::vec3  acc; 
+    glm::mat3 sigma;
+    glm::mat3 epsilon;
+    glm::mat3 J;  // Jacobian
+    glm::vec3  acc;  // Acceleration
 
     vector<Neighbor> neighbors;
 
-    float r;  //distance to neighbors
-    float h;  //support radius
-    float rho;  //density
-    float vol;  //volume
-    glm::vec3 v;  //current velocity
-    glm::vec3 F;  //force
-    bool isFixed;
+    float r;  // Distance to neighbors
+    float h;  // Support radius
+    float rho;  // Density
+    float vol;  // Volume
+    glm::vec3 v;  // Current velocity
+    glm::vec3 F;  // Force
+    bool isFixed;  // Whether it's fixed
 };
-
 
 
 #endif

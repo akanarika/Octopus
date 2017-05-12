@@ -8,10 +8,20 @@
 
 // Phyxel Class
 #include "phyxel.h"
-// Class to load the object
+// Class to load the oJ_partect
 // Reference from http://www.opengl-tutorial.org/
 // beginners-tutorials/tutorial-7-model-loading/
-#include "objloader.hpp"
+#include "oJ_partloader.hpp"
+
+/* World : seperate the space into small squares
+* y
+* ^    z
+* |   /
+* |  /
+* | /
+* | - - - - -> x
+* 0
+*/ 
 
 // Window size
 #define width 1024
@@ -21,15 +31,20 @@
 
 using namespace std;
 
-// time_step
+//  time_step
 float time_step =  0.25f;
 float curr_time = 0;
 double total_time = time_step;
+struct timeval t1, t2;
+double frame_timestep = 0;
+float frame_time = 0;
+float start_time = 0, fps = 0;
+int frame_count = 0;
 
-// Selected vertex index
+//  Selected vertex index
 int selected_index = -1;
 
-// For camera control
+//  For camera control
 float rot_x = 15;
 float rot_y = 0;
 float t_y = -3;
@@ -42,26 +57,23 @@ GLint viewport[4];
 GLdouble MV[16];
 GLdouble P[16];
 
-// Define gravity vector
+//  Define gravity vector
 glm::vec3 gravity=glm::vec3(0.0f,-9.81f,0.0f);
 
-// Time step
-struct timeval t1, t2;
-double frame_timestep = 0;
-float frame_time = 0;
-float start_time = 0, fps = 0;
-int frame_count = 0;
-
-// Initialize for math
-// Poisson ratio
+//  Initialize for math
+//  Poisson ratio
+//  The Poisson's ratio of a stable, isotropic, 
+//  linear elastic material will be 
+//  greater than −1.0 or less than 0.5 because of 
+//  the requirement for Young's modulus
 float poisson =  0.4f;
-// Young modulus
+//  Young's modulus
 float young = 300.0f;
-// Material density
+//  Material density
 float density = 10000.f;
-// K
+//  Spring constant   ( Energy = 1/2 kx^2, x = delta_distance)
 float kv = 100;
-// Damping of velocity
+//  Damping of velocity
 float damping = 50.0f;
 
 // Calculation for C
@@ -79,7 +91,7 @@ vector<Phyxel*> phyxels;
 vector< glm::vec3 > vertices;
 vector< glm::vec2 > uvs;
 vector< glm::vec3 > normals;
-bool res = loadOBJ("oct.obj", vertices, uvs, normals);
+bool res = loadOJ_part("oct.oJ_part", vertices, uvs, normals);
 
 const int num_particle = vertices.size();
 float scale = 0;
@@ -173,7 +185,7 @@ void OnRender() {
     for(i = 0; i < num_particle; i++) {
         glm::vec3 p = phyxels[i]->X;
         
-        if(i==selected_index)
+        if(i == selected_index)
             glColor3f(1,1,1);
         else
             glColor3f(0.3,0.3,0.3);
@@ -192,11 +204,11 @@ void DrawGrid()
     glColor3f(0.05f, 0.05f, 0.05f);
     for(int i = -grid_size; i <= grid_size; i++)
     {
-        glVertex3f((float)i,0,(float)-grid_size);
-        glVertex3f((float)i,0,(float)grid_size);
+        glVertex3f((float)i, 0, (float)-grid_size);
+        glVertex3f((float)i, 0, (float)grid_size);
         
-        glVertex3f((float)-grid_size,0,(float)i);
-        glVertex3f((float)grid_size,0,(float)i);
+        glVertex3f((float)-grid_size, 0, (float)i);
+        glVertex3f((float)grid_size, 0, (float)i);
     }
     glEnd();
 }
@@ -233,18 +245,20 @@ void OnMouseDown(int button, int s, int x, int y)
         prev_y = y;
 
         GLfloat window_x, window_y, window_z;
-        GLdouble objX, objY, objZ;
+        GLdouble oJ_part_x, oJ_part_y, oJ_part_z;
 
         window_x = (float) x;
         window_y = viewport[3] - (float) y;
 
-        glReadPixels(x, (int)window_y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &window_z);
+        glReadPixels(x, (int)window_y, 1, 1, GL_DEPTH_COMPONENT, 
+                     GL_FLOAT, &window_z);
         
-        gluUnProject(window_x, window_y, window_z, MV, P, viewport, &objX, &objY, &objZ);
-        glm::vec3 pt(objX, objY, objZ);
-        int i=0;
-        for(i=0;i<num_particle;i++) {
-            if( glm::distance(phyxels[i]->X,pt)<.1) {
+        gluUnProject(window_x, window_y, window_z, MV, P, 
+                     viewport, &oJ_part_x, &oJ_part_y, &oJ_part_z);
+        glm::vec3 pt(oJ_part_x, oJ_part_y, oJ_part_z);
+        int i = 0;
+        for(i = 0; i < num_particle; i++) {
+            if(glm::distance(phyxels[i]->X,pt) < 0.1) {
                 selected_index = i;
                 printf("Intersected at %d\n",i);
                 break;
@@ -351,7 +365,6 @@ void InitGL() {
     
 }
 
-
 typedef std::pair<int, float> idx_to_dist;
 
 struct Cmp {
@@ -361,10 +374,8 @@ struct Cmp {
 };
 
 void GetNeighbors(int index, int k, vector<float>& dis, vector<Neighbor>& n) {
-    
     vector<idx_to_dist> distances;
 
-    //Get the distances of current point to all other points
     for(int i = 0; i < num_particle; i++) {
         if(index!=i) {
             idx_to_dist m;
@@ -374,45 +385,37 @@ void GetNeighbors(int index, int k, vector<float>& dis, vector<Neighbor>& n) {
         }
     }
 
-    //sort the distances
     sort (distances.begin(), distances.end(), Cmp());
 
-    //now take the top k neighbors based on distance
     for(int i = 0; i < k; i++) {
-        Neighbor ne;
-        ne.j = distances[i].first;
+        Neighbor new_neighbor;
+        new_neighbor.j = distances[i].first;
         dis.push_back(distances[i].second);
-        n.push_back(ne);
+        n.push_back(new_neighbor);
     }
 }
 
 void ComputeRadius(vector<float> &dists, float& r, float& h)
 {
-    //For this read section 3.2 Initialization on page 4
-    //look through all neigbour distances
-    //and average the distance. This will give us r
     float avg = 0.f;
     for(size_t i=0;i<dists.size();i++)
         avg += dists[i];
     r = avg / dists.size();
 
-    // compute the support radii H = 3 * R
     h = 3.0f * r;
 }
 
 void SetNeighbors(int index)
 {
-    //For this read section 3.2 Initialization on page 4
-    //Based on Eq. 9
     float mul_factor = float(315.0f
-                            /(64*M_PI*pow(phyxels[index]->h,9.0f)));//35 / (float)(32 * M_PI * pow(h, 7));
+                            /(64*M_PI*pow(phyxels[index]->h,9.0f)));
     float h2 = phyxels[index]->h * phyxels[index]->h;
     for(size_t i=0;i<phyxels[index]->neighbors.size();i++)
     {
         Neighbor& n = phyxels[index]->neighbors[i];
         n.rdist  = phyxels[n.j]->Xi - phyxels[index]->Xi;
-        float r2 = glm::dot(n.rdist, n.rdist);      //r = sqrt(Xij.x*Xij.x+Xij.y*Xij.y+Xij.z*Xij.z)
-                                                    //r^2 = dot(Xij,Xij);
+        float r2 = glm::dot(n.rdist, n.rdist);
+
         n.w = mul_factor * pow(h2 - r2, 3);
     }
 }
@@ -429,20 +432,16 @@ void GetFactor() {
         }
         scale += 1.0f / sum;
     }
-    // This is the common scaling factor to compute the mass of each phyxel.
-    // See last paragraph of Section 3.2 on page 4
     scale /= num_particle;
 }
 
 void ComputeM(float dm, int index)
 {
-    // See last paragraph of Section 3.2 on page 4
     phyxels[index]->m = scale * pow(phyxels[index]->r, 3) * dm;
 }
 
 void ComputeRhoVolume(int index)
 {
-    // See last paragraph of Section 3.2 on page 4
     phyxels[index]->rho = 0.f;
     vector<Neighbor>& pNeighbor = phyxels[index]->neighbors;
     for(size_t i = 0; i < pNeighbor.size(); i++)
@@ -450,37 +449,30 @@ void ComputeRhoVolume(int index)
     phyxels[index]->vol =  phyxels[index]->m / phyxels[index]->rho;
 }
 
+// A_i = sum_j(x_ij * x_ij^T * w_ij)
 void ComputeInverseA(int index)
 {
     glm::mat3 A, A_sum, V;
-    A =glm::mat3(0);
+    A = glm::mat3(0);
 
     vector<Neighbor>& pNeighbor = phyxels[index]->neighbors;
-    for(size_t i=0;i < pNeighbor.size();i++)
+    for(size_t i = 0;i < pNeighbor.size();i++)
     {
         A_sum = glm::outerProduct(pNeighbor[i].rdist, 
-                pNeighbor[i].rdist * pNeighbor[i].w); // Eq. 14
+                pNeighbor[i].rdist * pNeighbor[i].w);
         A += A_sum;
     }
 
     if(glm::determinant(A) != 0.0)
-        phyxels[index]->Ai = glm::inverse(A);      // Eq. 14, inverted moment matrix
-    else
-    {
-        // if MomentMatrix is not invertible it means that there are less than 4 neighbors
-        // or the neighbor phyxels are coplanar or colinear
-        // We should use SVD to extract the inverse but I have left this as is.
-        //Read section 3.3 last paragraph
-        puts("Warning: Singular matrix!!!");
-    }
+        phyxels[index]->Ai = glm::inverse(A);
 
-    phyxels[index]->di=glm::vec3(0);
+    phyxels[index]->di = glm::vec3(0);
 
-    for(size_t i=0;i<pNeighbor.size();i++)
+    for(size_t i = 0; i < pNeighbor.size(); i++)
     {
         glm::vec3 Xij_Wij = pNeighbor[i].rdist * pNeighbor[i].w;
-        pNeighbor[i].dj = phyxels[index]->Ai * Xij_Wij;    //Eq. 21 page 5
-        phyxels[index]->di -= pNeighbor[i].dj;               //Eq. 20 page 5
+        pNeighbor[i].dj = phyxels[index]->Ai * Xij_Wij;
+        phyxels[index]->di -= pNeighbor[i].dj;
     }
 }
 
@@ -491,14 +483,12 @@ void ComputeLoop(float dt) {
 
 void UpdateF()
 {
-    //Calculate external force
-    for(int i=0;i<num_particle;i++) {
+    for(int i = 0; i < num_particle; i++) {
         if(!phyxels[i]->isFixed)
             phyxels[i]->F = gravity;
         else
             phyxels[i]->F = glm::vec3(0);
 
-        //Add velocity damping
         phyxels[i]->F -= phyxels[i]->v * damping;
     }
 
@@ -506,24 +496,30 @@ void UpdateF()
 
     ComputeF();
 
-
-    //Calculate internal force using the stress and Jacobians
-    for(int i=0;i<num_particle;i++) {
+    for(int i = 0; i < num_particle; i++) {
         glm::mat3 F_e, F_v;
-        F_e =  -2 * phyxels[i]->vol * (phyxels[i]->J * phyxels[i]->sigma) ;    // Eq. 18
-        glm::vec3 J_u = glm::vec3(phyxels[i]->J[0][0], phyxels[i]->J[0][1],phyxels[i]->J[0][2]);
-        glm::vec3 J_v = glm::vec3(phyxels[i]->J[1][0], phyxels[i]->J[1][1],phyxels[i]->J[1][2]);
-        glm::vec3 J_w = glm::vec3(phyxels[i]->J[2][0], phyxels[i]->J[2][1],phyxels[i]->J[2][2]);
+        F_e =  -2 * phyxels[i]->vol * (phyxels[i]->J * phyxels[i]->sigma) ;
+        glm::vec3 J_u = glm::vec3(phyxels[i]->J[0][0], 
+                                  phyxels[i]->J[0][1],
+                                  phyxels[i]->J[0][2]);
+        glm::vec3 J_v = glm::vec3(phyxels[i]->J[1][0],
+                                  phyxels[i]->J[1][1],
+                                  phyxels[i]->J[1][2]);
+        glm::vec3 J_w = glm::vec3(phyxels[i]->J[2][0],
+                                  phyxels[i]->J[2][1],
+                                  phyxels[i]->J[2][2]);
 
-        glm::vec3 row0 = glm::cross(J_v, J_w);  //Eq. 22
-        glm::vec3 row1 = glm::cross(J_w, J_u);  //Eq. 22
-        glm::vec3 row2 = glm::cross(J_u, J_v);  //Eq. 22
-        glm::mat3 M = glm::transpose(glm::mat3(row0, row1, row2));   //Eq. 22
+        glm::vec3 row0 = glm::cross(J_v, J_w);
+        glm::vec3 row1 = glm::cross(J_w, J_u);
+        glm::vec3 row2 = glm::cross(J_u, J_v);
 
-        F_v = -phyxels[i]->vol * kv * (glm::determinant(phyxels[i]->J) - 1) * M ; //Eq. 22
+        glm::mat3 M = glm::transpose(glm::mat3(row0, row1, row2));
+
+        F_v = -phyxels[i]->vol * kv 
+              * (glm::determinant(phyxels[i]->J) - 1) * M ;
 
         vector<Neighbor>& pNeighbor = phyxels[i]->neighbors;
-        for(size_t j=0;j<pNeighbor.size();j++)
+        for(size_t j = 0; j < pNeighbor.size(); j++)
             phyxels[pNeighbor[j].j]->F += (F_e + F_v) * pNeighbor[j].dj;
 
         phyxels[i]->F += (F_e + F_v) * phyxels[i]->di;
@@ -532,52 +528,57 @@ void UpdateF()
 
 void ComputeJ()
 {
-    for(int i=0;i<num_particle;i++) {
+    for(int i = 0; i < num_particle; i++) {
         vector<Neighbor>& pNeighbor = phyxels[i]->neighbors;
-        for(size_t j=0;j<pNeighbor.size();j++)
+        for(size_t j = 0; j < pNeighbor.size(); j++)
             phyxels[pNeighbor[j].j]->U = phyxels[pNeighbor[j].j]->X 
                                         - phyxels[pNeighbor[j].j]->Xi;
 
-        glm::mat3 B=glm::mat3(0);       // help matrix used to compute the sum in Eq. 15
+        glm::mat3 B = glm::mat3(0);
 
-        // reset du and du_tr
-        glm::mat3 du=glm::mat3(0);
-        glm::mat3 du_tr=glm::mat3(0);
+        glm::mat3 du = glm::mat3(0);
+        glm::mat3 du_tr = glm::mat3(0);
 
-        for(size_t j=0;j < pNeighbor.size();j++)
+        for(size_t j = 0; j < pNeighbor.size(); j++)
         {
-            glm::mat3 Bj=glm::mat3(0);
-            //Eq. 15 right hand side terms with A_inv
-            Bj =glm::outerProduct(phyxels[pNeighbor[j].j]->U - phyxels[i]->U, 
-                            pNeighbor[j].rdist * pNeighbor[j].w );
-            B += Bj;
+            glm::mat3 J_part = glm::mat3(0);
+            J_part = glm::outerProduct(phyxels[pNeighbor[j].j]->U -
+                                       phyxels[i]->U, 
+                                       pNeighbor[j].rdist * pNeighbor[j].w );
+            B += J_part;
         }
         B = glm::transpose(B);
 
-        du = phyxels[i]->Ai * B;   // Eq. 15 page 4
+        du = phyxels[i]->Ai * B;
         du_tr = glm::transpose(du);
         phyxels[i]->J=glm::mat3(1);
-        phyxels[i]->J += du_tr;      // Eq. 1
+        phyxels[i]->J += du_tr;
     }
 
 }
 
 void ComputeF()
 {
-    for(int i=0;i<num_particle;i++) {
+    for(int i = 0; i < num_particle; i++) {
         glm::mat3 Jtr = glm::transpose(phyxels[i]->J);
-        phyxels[i]->epsilon = (Jtr * phyxels[i]->J) - I;      // formula 3, Green-Saint Venant non-linear tensor
+        phyxels[i]->epsilon = (Jtr * phyxels[i]->J) - I;
 
-        glm::mat3& e= phyxels[i]->epsilon;
-        glm::mat3& s= phyxels[i]->sigma;
+        glm::mat3& e = phyxels[i]->epsilon;  // epsilon
+        glm::mat3& s = phyxels[i]->sigma;  // sigma
 
-        s[0][0] = D.x*e[0][0]+D.y*e[1][1]+D.y*e[2][2];
-        s[1][1] = D.y*e[0][0]+D.x*e[1][1]+D.y*e[2][2];
-        s[2][2] = D.y*e[0][0]+D.y*e[1][1]+D.x*e[2][2];
+        s[0][0] = D.x * e[0][0] 
+                  + D.y * e[1][1] 
+                  + D.y * e[2][2];
+        s[1][1] = D.y * e[0][0]
+                  + D.x * e[1][1]
+                  + D.y*e[2][2];
+        s[2][2] = D.y*e[0][0]
+                  + D.y*e[1][1] 
+                  + D.x*e[2][2];
 
-        s[0][1] = D.z*e[0][1];
-        s[1][2] = D.z*e[1][2];
-        s[2][0] = D.z*e[2][0];
+        s[0][1] = D.z * e[0][1];
+        s[1][2] = D.z * e[1][2];
+        s[2][0] = D.z * e[2][0];
 
         s[0][2] = s[2][0];
         s[1][0] = s[0][1];
@@ -586,29 +587,25 @@ void ComputeF()
 }
 
 void UpdatePos(float dt) {
-    int i=0;
-    float dt2 = dt*dt;
-    float half_dt2 = dt2*0.5f;
-
-    for(i=0;i<num_particle;i++) {
-
-        //X_(i+1) = X_i + V_i*dt + 1/2*a_i*dt^2
+    float dt2 = dt * dt;
+    float half_dt2 = dt2 * 0.5f;
+    
+    int i = 0;
+    for(i = 0; i < num_particle; i++) {
         if(!phyxels[i]->isFixed) {
-            phyxels[i]->acc = phyxels[i]->F/phyxels[i]->m;
+            phyxels[i]->acc = phyxels[i]->F / phyxels[i]->m;
 
-            phyxels[i]->X += dt*phyxels[i]->v+(phyxels[i]->acc*half_dt2);
-            //printf("acc %d: pos (%f,%f,%f)\n", i, acc0[i].x, acc0[i].y, acc0[i].z);
-
-            if(phyxels[i]->X.y <0) {
+            phyxels[i]->X += dt * phyxels[i]->v 
+                             + (phyxels[i]->acc * half_dt2);
+            
+            if(phyxels[i]->X.y < 0) {
                 phyxels[i]->X.y = 0;
             }
-            //printf("X %d: pos (%f,%f,%f)", i, X[i].x, X[i].y, X[i].z);
         }
     }
-    //Calculate the new acceleration
+    
     UpdateF();
 
-    //V_(i+1) = V_i + ((a_i+a_(i+1))/2)*dt^2
     for(i=0;i<num_particle;i++) {
         if(!phyxels[i]->isFixed)
             phyxels[i]->v += ((phyxels[i]->F/phyxels[i]->m 

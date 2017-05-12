@@ -21,7 +21,6 @@ void Phyxel::setX(glm::vec3 x) {
     X = x;
 }
 
-
 void Phyxel::setXi(glm::vec3 xi) {
     Xi = xi;
 }
