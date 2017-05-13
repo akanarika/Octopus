@@ -8,10 +8,10 @@
 
 // Phyxel Class
 #include "phyxel.h"
-// Class to load the oJ_partect
+// Class to load the object
 // Reference from http://www.opengl-tutorial.org/
 // beginners-tutorials/tutorial-7-model-loading/
-#include "oJ_partloader.hpp"
+#include "objloader.hpp"
 
 /* World : seperate the space into small squares
 * y
@@ -91,7 +91,7 @@ vector<Phyxel*> phyxels;
 vector< glm::vec3 > vertices;
 vector< glm::vec2 > uvs;
 vector< glm::vec3 > normals;
-bool res = loadOJ_part("oct.oJ_part", vertices, uvs, normals);
+bool res = loadOBJ("oct.obj", vertices, uvs, normals);
 
 const int num_particle = vertices.size();
 float scale = 0;
@@ -245,7 +245,7 @@ void OnMouseDown(int button, int s, int x, int y)
         prev_y = y;
 
         GLfloat window_x, window_y, window_z;
-        GLdouble oJ_part_x, oJ_part_y, oJ_part_z;
+        GLdouble obj_x, obj_y, obj_z;
 
         window_x = (float) x;
         window_y = viewport[3] - (float) y;
@@ -254,8 +254,8 @@ void OnMouseDown(int button, int s, int x, int y)
                      GL_FLOAT, &window_z);
         
         gluUnProject(window_x, window_y, window_z, MV, P, 
-                     viewport, &oJ_part_x, &oJ_part_y, &oJ_part_z);
-        glm::vec3 pt(oJ_part_x, oJ_part_y, oJ_part_z);
+                     viewport, &obj_x, &obj_y, &obj_z);
+        glm::vec3 pt(obj_x, obj_y, obj_z);
         int i = 0;
         for(i = 0; i < num_particle; i++) {
             if(glm::distance(phyxels[i]->X,pt) < 0.1) {
@@ -541,11 +541,11 @@ void ComputeJ()
 
         for(size_t j = 0; j < pNeighbor.size(); j++)
         {
-            glm::mat3 J_part = glm::mat3(0);
-            J_part = glm::outerProduct(phyxels[pNeighbor[j].j]->U -
+            glm::mat3 bj = glm::mat3(0);
+            bj = glm::outerProduct(phyxels[pNeighbor[j].j]->U -
                                        phyxels[i]->U, 
                                        pNeighbor[j].rdist * pNeighbor[j].w );
-            B += J_part;
+            B += bj;
         }
         B = glm::transpose(B);
 
