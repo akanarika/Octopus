@@ -1,1 +1,0 @@
-To open reference: open index.html in reference folder
